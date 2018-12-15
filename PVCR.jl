@@ -1,6 +1,7 @@
 using DelimitedFiles
-using Plots
+using PyPlot
 using Distributions
+
 
 include("types/tariffs.jl")
 include("types/consumers.jl")

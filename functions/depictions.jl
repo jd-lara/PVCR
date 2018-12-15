@@ -16,7 +16,7 @@ function make_pv_curve(pvsys::PVSystem, days::Int64)
     d_s = Truncated(Normal(-0.2, 0.5), -0.10, 0.15)
     pv_curve = Array{Float64,1}()
     for days in 1:days
-        solar_day_base = pysys.time_series[(15+days)*24:(((16+days)*24) -1)]
+        solar_day_base = pvsys.time_series[(15+days)*24:(((16+days)*24) -1)]
         solar_day = [(s+rand(d_s, 1)[1])*(s > 0.1) for s in solar_day_base]*pvsys.capacity
         pv_curve = vcat(pv_curve,solar_day)
     end
