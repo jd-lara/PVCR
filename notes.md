@@ -25,3 +25,5 @@
 - Reducción de las tarifas de Binomial a Monómica, y hay como 6000 clientes posibles.
 - Empresa privada espera un mayor VAN. Nadie a más de 10 años en el cálculo del VAN. Si en 5 años no se recupera la inversión entonces no se hace el proyecto.
 - Mucha gente de residencial por encima de 500 kWh casi siempre paga efectivo. Por debajo de 500 kWh es difícil que sea rentable el proyecto.
+
+ - Paper Load Curves: https://ieeexplore.ieee.org/document/7981065

@@ -179,9 +179,9 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
 
                inyection_grid += max(0.0, -1*balance) 
                
-               peak_power = max(0.0, peak_power, daily_p[t]) 
+               peak_power = max(peak_power, daily_p[t]) 
                
-               peak_demand = max(0.0, peak_demand, balance)          
+               peak_demand = max(peak_demand, balance)          
 
                available_energy = carry_over + max(0.0, -1*balance)  
 
@@ -248,7 +248,9 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
                             "global_allowance" => global_allowance,
                             "max_surplus" => max_surplus,
                             "real_surplus" => real_surplus
-                    )     
+                    )
+        peak_power = 0.0
+        peak_demand = 0.0             
             
     end
     
@@ -428,7 +430,15 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                      withdrawn_energy += carry_over
                      carry_over = 0.0
                 end
-             
+                
+                peak_power_peak = 0.0
+                peak_demand_peak = 0.0      
+                    
+                peak_power_valley = 0.0
+                peak_demand_valley = 0.0
+                    
+                peak_power_night = 0.0                
+                peak_demand_night = 0.0
                                 
            global_generation += PV_energy #GenAcum
            global_allowance = 0.49*global_generation - global_withdrawl #Disp
