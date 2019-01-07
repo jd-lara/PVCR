@@ -2,6 +2,9 @@
 
 - Providers have resorted to offering turn-key solutions that already account for the interconnection cost.
 
+- In April 2016 the method and tiers for Residential consumers changed
+- In Juli 2016 the tiers and method for commercial-services changed. 
+
 
 ## Enertiva
 
