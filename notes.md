@@ -5,6 +5,9 @@
 - In April 2016 the method and tiers for Residential consumers changed
 - In Juli 2016 the tiers and method for commercial-services changed. 
 
+- Aplication of the Public Light "Artículo 135 - SUCOM . Facturación del alumbrado público: Los productores consumidores pagarán el alumbrado público sobre el total de la energía retirada de la red, la cual se entenderá como la sumatoria de la energía retirada  del  consumo diferido asociado a la generación para autoconsumo en su modalidad contractual medición neta sencilla y  la energía vendida por la empresa distribuidora."
+
+- The same application of public light used for taxes. If energy  > 280 kWh, then 13% VAT applies. If energy > 100 kWh then 1.75% Firefighters tax applies.
 
 ## Enertiva
 

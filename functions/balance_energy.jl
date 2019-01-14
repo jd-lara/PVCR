@@ -273,20 +273,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
     days_p_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     m_h = 0
     count = 0
-
-    # Initial conditions
-    peak = [10, 11, 12, 17, 18, 19]
-    peak_power_peak = 0.0
-    peak_demand_peak = 0.0      
-                    
-    valley = [6, 7, 8, 9, 13, 14, 15, 16]
-    peak_power_valley = 0.0
-    peak_demand_valley = 0.0
-                    
-    night = [20, 21, 22, 23, 24, 1, 2, 3, 4, 5]                
-    peak_power_night = 0.0                
-    peak_demand_night = 0.0
-                    
+                   
     carry_over = 0.0
     global_allowance = 0.0
     global_withdrawl = 0.0
@@ -296,6 +283,19 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
     #Loop for every Month of the year 
     for (ix,m) in enumerate(days_p_month)
         
+        # Initial monthly conditions
+        peak = [10, 11, 12, 17, 18, 19]
+        peak_power_peak = 0.0
+        peak_demand_peak = 0.0      
+
+        valley = [6, 7, 8, 9, 13, 14, 15, 16]
+        peak_power_valley = 0.0
+        peak_demand_valley = 0.0
+
+        night = [20, 21, 22, 23, 24, 1, 2, 3, 4, 5]                
+        peak_power_night = 0.0                
+        peak_demand_night = 0.0
+                        
         #Get solar Data with houtly resolution for the month 
         solar_month_base = pvsys.time_series[24*(m_h) + 1:24*(m_h+m)]
         solar_month = [(s+rand(d_s, 1)[1])*(s > 0.1) for s in solar_month_base]*pvsys.capacity
@@ -304,7 +304,6 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
         #Simulate month on an hourly basis 
         #initial conditions. 
         available_energy = 0.0
-        grid_energy = 0.0 
         withdrawn_energy = 0.0
         consumer_energy_peak = 0.0
         consumer_energy_valley = 0.0
@@ -338,6 +337,8 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
 
                inyection_grid += max(0.0, -1*balance) 
                
+               #Peak demand corresponds to the peak as measured by the distribution company 
+                                
                #(t in peak) ? println("peak d"," ",  peak_demand_peak, " ", balance, " ", max(0.0, peak_demand_peak, max(0.0,balance)) ) : true
                (t in peak) ? peak_demand_peak = max(0.0, peak_demand_peak, max(0.0,balance)) : true
                  
@@ -346,7 +347,9 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                                
                #(t in night) ? println("night d", " ", peak_demand_night, " ", balance, " ", max(0.0, peak_demand_night, max(0.0,balance)) ) : true 
                (t in night) ? peak_demand_night = max(0.0, peak_demand_night, max(0.0,balance)) : true                  
-
+                
+               #Peak power corresponds to the peak of the consumer load
+                                
                #(t in peak) ? println("peak p", " ", peak_power_peak, " ", daily_p[t], " ", max(0.0, peak_power_peak, daily_p[t]) ) : true                    
                (t in peak) ? peak_power_peak = max(0.0, peak_power_peak, daily_p[t]) : true
                       
@@ -373,7 +376,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
 
                         (t in peak) ? grid_energy_peak += 0.0 : true
                         (t in valley) ? grid_energy_valley += 0.0 : true                  
-                        (t in night) ? grid_energy += 0.0 : true                 
+                        (t in night) ? grid_energy_night += 0.0 : true                 
 
                         carry_over = withdrawl
 
@@ -430,15 +433,6 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                      withdrawn_energy += carry_over
                      carry_over = 0.0
                 end
-                
-                peak_power_peak = 0.0
-                peak_demand_peak = 0.0      
-                    
-                peak_power_valley = 0.0
-                peak_demand_valley = 0.0
-                    
-                peak_power_night = 0.0                
-                peak_demand_night = 0.0
                                 
            global_generation += PV_energy #GenAcum
            global_allowance = 0.49*global_generation - global_withdrawl #Disp
@@ -449,7 +443,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                 
            results[ix] = Dict("consumer_energy_peak" => consumer_energy_peak,
                               "consumer_energy_valley" => consumer_energy_valley,
-                              "consumer_energy_night" => consumer_energy_valley,
+                              "consumer_energy_night" => consumer_energy_night,
                               "PV_energy" => PV_energy,
                               "inyection_grid" => inyection_grid,
                               "withdrawn_energy" => withdrawn_energy,
@@ -469,7 +463,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                               "max_surplus" => max_surplus,
                               "real_surplus" => real_surplus
                         )     
-                
+
     end
     
     if print_output 
