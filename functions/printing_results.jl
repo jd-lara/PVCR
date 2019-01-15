@@ -11,9 +11,7 @@ function print_residential(energy_totals::Dict)
                                 "global_withdrawl", " ",
                                 "global_allowance", " ", 
                                 "max_surplus", " ",
-                                " | ",
-                                "carryover"," ",
-                                "real_surplus") 
+                                "carryover"," ") 
         
         
         for i in 1:12
@@ -29,9 +27,7 @@ function print_residential(energy_totals::Dict)
                                 round(energy_totals[i]["global_withdrawl"], digits=2), " ",
                                 round(energy_totals[i]["global_allowance"], digits=2), " ", 
                                 round(energy_totals[i]["max_surplus"], digits=2), " ",
-                                " | ",
-                                round(energy_totals[i]["carry_over"],digits=2), " ",
-                                round(energy_totals[i]["real_surplus"], digits=2)) 
+                                round(energy_totals[i]["carry_over"],digits=2), " ") 
         
      end
 
@@ -53,9 +49,7 @@ function print_commercial(energy_totals::Dict)
                                 "global_withdrawl", " ",
                                 "global_allowance", " ", 
                                 "max_surplus", " ",
-                                " | ",
-                                "carry_over", " ",
-                                "real_surplus") 
+                                "carry_over", " ")
         
 
 
@@ -74,9 +68,7 @@ function print_commercial(energy_totals::Dict)
                                 round(energy_totals[i]["global_withdrawl"], digits=2), " ",
                                 round(energy_totals[i]["global_allowance"], digits=2), " ", 
                                 round(energy_totals[i]["max_surplus"], digits=2), " ",
-                                " | ",
-                                round(energy_totals[i]["carry_over"],digits=2), " ",
-                                round(energy_totals[i]["real_surplus"], digits=2)) 
+                                round(energy_totals[i]["carry_over"],digits=2), " ")
         end
 
 end
@@ -107,9 +99,7 @@ function print_TMT(energy_totals::Dict)
                                 "global_withdrawl", " ",
                                 "global_allowance", " ", 
                                 "max_surplus", " ",
-                                " | ",
-                                "carry_over", " ",                
-                                "real_surplus")  
+                                "carry_over") 
     
      for i in 1:12 
                 println(i," | ",round(energy_totals[i]["consumer_energy_peak"], digits=2), " ",
@@ -136,9 +126,7 @@ function print_TMT(energy_totals::Dict)
                                 round(energy_totals[i]["global_withdrawl"], digits=2), " ",
                                 round(energy_totals[i]["global_allowance"], digits=2), " ", 
                                 round(energy_totals[i]["max_surplus"], digits=2), " ",
-                                " | ",
-                                round(energy_totals[i]["carry_over"], digits=2), " ",
-                                round(energy_totals[i]["real_surplus"], digits=2)) 
+                                round(energy_totals[i]["carry_over"], digits=2), " ") 
         end
 end
     

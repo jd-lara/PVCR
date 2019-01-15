@@ -12,6 +12,7 @@ include("types/pvsystems.jl")
 
 include("functions/printing_results.jl")
 include("functions/balance_energy.jl")
+include("functions/balance_energy_nmw.jl")
 include("functions/consumer.jl")
 include("functions/billing.jl")
 include("functions/financials.jl")

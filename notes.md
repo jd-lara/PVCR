@@ -9,6 +9,10 @@
 
 - The same application of public light used for taxes. If energy  > 280 kWh, then 13% VAT applies. If energy > 100 kWh then 1.75% Firefighters tax applies.
 
+- For the demand charges: Servicios con facturación de demanda: En los servicios que por la característica de la tensión de acceso o por el uso de la energía se facture tanto el cargo por energía como el de potencia,  el mismo se realizará de conformidad con la metodología y pliegos tarifarios vigentes, y se clasificará en el bloque de consumo que corresponda,   con base en el total de energía retirada de la red de distribución, la cual se entenderá como la sumatoria de la energía retirada  del  consumo diferido asociado a la generación para autoconsumo en su modalidad contractual medición neta sencilla y  la energía vendida por la empresa distribuidora.
+
+- Energy Storage in Distribution system is done according to DVME-008-2018
+
 ## Enertiva
 
 - Depende de la rentabilidad. Mayor rentabilidad en la tarifa general y es donde hay mayor adopción. El análisis se realiza por medidores.
