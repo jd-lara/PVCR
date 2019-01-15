@@ -18,7 +18,7 @@ function PVCost(system::PVSystem, exr::Float64)
 
     PVSize=system.capacity
 
-    pu_cost=[ref[2] for ref in cost_array if PVSize in ref[1]]
+    pu_cost=[ref[2] for ref in cost_array if (PVSize > ref[1][1]) & (PVSize <= ref[1][end])][1]
 
     return pu_cost*PVSize*exr
 

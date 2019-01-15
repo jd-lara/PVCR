@@ -25,4 +25,4 @@ PVTMT = PVSystem(30.0,
 )
 
 #Financials for the system
-BAC1 = Financial(4.5, 7, 5, 600);
+BAC1 = Financial(0.045, 0.07, 5, 600.0);
