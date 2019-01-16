@@ -8,11 +8,11 @@ function monthly_bill(energy_dict::Dict, consumer::Residential; print_output = f
     counterfactual_cost = 0.0
 
     for block in consumer.tariff.e_cost
-        energy_dict["grid_energy"] > block[1][end] ? grid_energy_cost += block[1][end]*block[2] : grid_energy_cost += (energy_dict["grid_energy"] - block[1][1] + 1.0 )*block[2]*(energy_dict["grid_energy"] > block[1][1])
+        energy_dict["grid_energy"] > block[1][end] ? grid_energy_cost += block[1][end]*block[2] : grid_energy_cost += (energy_dict["grid_energy"] - block[1][1])*block[2]*(energy_dict["grid_energy"] > block[1][1])
     end
 
     for block in consumer.tariff.e_cost
-        energy_dict["consumer_energy"] > block[1][end] ?  counterfactual_cost += block[1][end]*block[2] :  counterfactual_cost += (energy_dict["consumer_energy"] - block[1][1] + 1.0 )*block[2]*(energy_dict["consumer_energy"] > block[1][1])
+        energy_dict["consumer_energy"] > block[1][end] ?  counterfactual_cost += block[1][end]*block[2] :  counterfactual_cost += (energy_dict["consumer_energy"] - block[1][1])*block[2]*(energy_dict["consumer_energy"] > block[1][1])
     end
 
     bill["Balance"] = energy_dict;
@@ -182,7 +182,7 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
     bill["savings_demand_cost_peak"] =  counterfactual_demand_cost_peak - grid_demand_cost_peak
     bill["savings_demand_cost_valley"] = counterfactual_demand_cost_valley - grid_demand_cost_valley
     bill["savings_demand_cost_night"] = counterfactual_demand_cost_night - grid_demand_cost_night     
-    bill["total_savings"] = bill["counterfactual_cost"] -   bill["total_cost"]          
+    bill["savings"] = bill["counterfactual_cost"] -   bill["total_cost"]          
 
     if print_output
             println(round(bill["grid_energy_cost_peak"], digits=2), " ",    
@@ -203,7 +203,7 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
                     round(bill["counterfactual_demand_cost_valley"], digits=2)," ",
                     round(bill["counterfactual_demand_cost_night"],  digits=2)," ",        
                      " | ",        
-                    round(bill["total_savings"], digits=2)," ",)
+                    round(bill["savings"], digits=2)," ",)
 
     end             
                     

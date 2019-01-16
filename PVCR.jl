@@ -3,6 +3,7 @@ using PyPlot
 using Distributions
 using DataFrames
 using CSV
+using Roots
 
 
 include("types/tariffs.jl")

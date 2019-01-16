@@ -1,3 +1,25 @@
+function irr(annuity::Array{Float64})
+    
+    if sum(annuity) <= 0.0
+        return 0.0
+    end
+    
+    tvmnpv(i,annuity)=begin
+         n=collect(1:length(annuity));
+         sum(annuity./(1+i).^n)
+        end
+    f(x)=tvmnpv(x, annuity)
+    return fzero(f, [0.0, 1.0])
+end
+
+function npv(annuities::Array{Float64}, rate::Float64)
+    pv = 0.0
+    for (ix,p) in enumerate(annuities)
+        pv += p/(1+rate)^(ix-1)
+    end
+    return pv
+end
+
 function period_pay(P::Float64, rate::Float64, n::Int64)
 
  return (P*rate*(1.0+rate)^n)/((1.0+rate)^n -1)
@@ -23,6 +45,7 @@ end
 
 function PV_netcost(consumer::Consumer, system::PVSystem, finance::Financial)
     
+    #println(consumer.econsumption, " ", system.capacity)
     if system.capacity > 0.0
         PV = PVCost(system,finance.XhR)
         payment = amortize(finance.apr/12, finance.term*12, PV)
@@ -49,3 +72,5 @@ function PV_netcost(consumer::Consumer, system::PVSystem, finance::Financial)
     return netsavings
         
 end
+    
+    
