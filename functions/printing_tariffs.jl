@@ -28,4 +28,7 @@ function plot_bill(bill::Dict, fields::Array{String})
         cum_sum += var
     end
     legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+    xticks(collect(1:12));
+    xlabel("Month")
+    ylabel("Total Bill [Colones]")
 end
