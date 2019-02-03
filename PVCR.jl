@@ -22,6 +22,7 @@ include("functions/financials.jl")
 include("functions/pvsystem.jl")
 include("functions/depictions.jl")
 include("functions/tariffs_hist.jl")
+include("functions/printing_tariffs.jl")
 
 include("data/tariff_data.jl")
 include("data/tariff_data_alternative.jl")

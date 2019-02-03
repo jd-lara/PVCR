@@ -1,3 +1,4 @@
+#=
 function print_tariff(tariff::Tariff)
     
     if tariff.category == "Residential"
@@ -16,4 +17,15 @@ function print_tariff(tariff::Tariff)
         
     plot(x,y)
 
+end
+=#
+
+function plot_bill(bill::Dict, fields::Array{String})
+    cum_sum = Array{Float64,1}(undef, 12)
+    for i in 1:length(fields)
+        var = [bill[m]["$(fields[i])"] for m in 1:12]
+        bar(collect(1:12), bottom = cum_sum, var, label="$(fields[i])")
+        cum_sum += var
+    end
+    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
 end
