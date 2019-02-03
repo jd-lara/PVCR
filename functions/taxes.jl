@@ -4,12 +4,12 @@ function street_light(energy::Float64, cost::Float64)
 
 end
 
-function VAT(energy::Float64, cost::Float64)
+function VAT(energy::Float64, cost::Float64; rate::Float64 = 0.13, cutoff::Int64 = 280)
     
     tax = 0.0
     
-    if energy > 280
-        tax = cost*0.13
+    if energy > cutoff
+        tax = cost*rate
     end
     
     return tax

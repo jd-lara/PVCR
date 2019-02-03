@@ -73,4 +73,24 @@ function PV_netcost(consumer::Consumer, system::PVSystem, finance::Financial)
         
 end
     
+function PV_savings(consumer::Consumer, system::PVSystem, term::Int64)
     
+    netsavings = Array{Float64,2}(undef,12,term)
+    
+    for y in 1:term
+        ebalance = annual_energy_balance(consumer, system, print_output=false);
+        
+        for m in 1:12
+
+            bill = monthly_bill(ebalance[m], consumer, print_output=false)
+
+            netsavings[m,y] = (bill["savings"])
+
+        end
+        
+    end
+
+    return netsavings
+        
+end
+        

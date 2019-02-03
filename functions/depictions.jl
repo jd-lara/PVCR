@@ -35,10 +35,10 @@ function simulate(consumer::Consumer, pvsys::PVSystem, days::Int64)
     available_energy_h = Array{Float64,1}()
     grid_energy_h = Array{Float64,1}()
     withdrawn_energy_h = Array{Float64,1}()
-    withdrawl_h = Array{Float64,1}()
+    withdrawal_h = Array{Float64,1}()
     consumer_energy_h = Array{Float64,1}()
     PV_energy_h = Array{Float64,1}()
-    inyection_grid_h = Array{Float64,1}()
+    injection_grid_h = Array{Float64,1}()
     stored_energy_h = Array{Float64,1}()
     carry_over_h = Array{Float64,1}()
     
@@ -48,7 +48,7 @@ function simulate(consumer::Consumer, pvsys::PVSystem, days::Int64)
     withdrawn_energy = 0.0
     consumer_energy = 0.0
     PV_energy = 0.0
-    inyection_grid = 0.0
+    injection_grid = 0.0
     carry_over = 0.0
 
     for day in 1:days 
@@ -65,45 +65,45 @@ function simulate(consumer::Consumer, pvsys::PVSystem, days::Int64)
            push!(PV_energy_h,PV_energy)
 
            balance = daily_p[t] - solar_day[t]
-           push!(inyection_grid_h, balance) 
+           push!(injection_grid_h, balance) 
 
-           inyection_grid += max(0.0, -1*balance) 
-           push!(stored_energy_h, inyection_grid)
+           injection_grid += max(0.0, -1*balance) 
+           push!(stored_energy_h, injection_grid)
 
            available_energy =  carry_over + max(0.0, -1*balance)  
            push!(available_energy_h, available_energy) 
 
-           withdrawl = 0.0 
+           withdrawal = 0.0 
 
            if balance >= 0.0
 
-                withdrawl = available_energy - balance
+                withdrawal = available_energy - balance
 
 
-                if withdrawl > 0.0 #There is enough stored to meet energy demand in t 
+                if withdrawal > 0.0 #There is enough stored to meet energy demand in t 
 
                     #Book Keeping
 
                     withdrawn_energy += balance
-                    push!(withdrawl_h, balance)
+                    push!(withdrawal_h, balance)
                     push!(withdrawn_energy_h, withdrawn_energy)
 
                     grid_energy += 0.0
                     push!(grid_energy_h,grid_energy)
 
-                    carry_over = withdrawl
-                    push!(carry_over_h, withdrawl)
+                    carry_over = withdrawal
+                    push!(carry_over_h, withdrawal)
 
-                elseif withdrawl <= 0.0 #There is not enough stored to meet energy demand in t                        
+                elseif withdrawal <= 0.0 #There is not enough stored to meet energy demand in t                        
 
                     withdrawn_energy += available_energy
-                    push!(withdrawl_h, available_energy)
+                    push!(withdrawal_h, available_energy)
                     push!(withdrawn_energy_h, withdrawn_energy)
 
                     carry_over = 0.0
                     push!(carry_over_h,0.0)
 
-                    grid_energy -= withdrawl
+                    grid_energy -= withdrawal
                     push!(grid_energy_h,grid_energy)
 
                 end
@@ -113,7 +113,7 @@ function simulate(consumer::Consumer, pvsys::PVSystem, days::Int64)
                 carry_over = available_energy 
                 push!(carry_over_h,carry_over)
                 push!(grid_energy_h,grid_energy)
-                push!(withdrawl_h, 0.0)
+                push!(withdrawal_h, 0.0)
                 push!(withdrawn_energy_h, withdrawn_energy)
 
            end
@@ -126,10 +126,10 @@ function simulate(consumer::Consumer, pvsys::PVSystem, days::Int64)
     time_series["available_energy_h"] = available_energy_h
     time_series["grid_energy_h"] = grid_energy_h 
     time_series["withdrawn_energy_h"] = withdrawn_energy_h
-    time_series["withdrawl_h"] = withdrawl_h
+    time_series["withdrawal_h"] = withdrawal_h
     time_series["consumer_energy_h"] = consumer_energy_h
     time_series["PV_energy_h"] = PV_energy_h
-    time_series["inyection_grid_h"] = inyection_grid_h
+    time_series["injection_grid_h"] = injection_grid_h
     time_series["stored_energy_h"] = stored_energy_h
     time_series["carry_over_h"] = carry_over_h
     time_series["demand_curve"] = demand_curve

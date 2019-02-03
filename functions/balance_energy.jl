@@ -12,9 +12,11 @@ function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_out
     # Initial conditions
     carry_over = 0.0
     global_allowance = 0.0
-    global_withdrawl = 0.0
+    global_withdrawal = 0.0
     global_generation = 0.0
     energy_loss = 0.0
+    peak_power = 0.0
+    peak_demand = 0.0
 
     #Loop for every Month of the year 
     for (ix,m) in enumerate(days_p_month)
@@ -31,7 +33,7 @@ function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_out
         withdrawn_energy = 0.0
         consumer_energy = 0.0
         PV_energy = 0.0
-        inyection_grid = 0.0
+        injection_grid = 0.0
 
         #Loop for every day of the month 
         for i in 1:m
@@ -48,17 +50,21 @@ function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_out
 
                balance = daily_p[t] - solar_day[t]
 
-               inyection_grid += max(0.0, -1*balance) 
+               injection_grid += max(0.0, -1*balance) 
+                
+               peak_power = max(peak_power, daily_p[t]) 
+               
+               peak_demand = max(peak_demand, balance)    
 
                available_energy = carry_over + max(0.0, -1*balance)  
 
-               withdrawl = 0.0 
+               withdrawal = 0.0 
 
                if balance >= 0.0
 
-                    withdrawl = available_energy - balance
+                    withdrawal = available_energy - balance
 
-                    if withdrawl > 0.0 #There is enough stored to meet energy demand in t 
+                    if withdrawal > 0.0 #There is enough stored to meet energy demand in t 
 
                         #Book Keeping
 
@@ -66,15 +72,15 @@ function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_out
 
                         grid_energy += 0.0  
 
-                        carry_over = withdrawl
+                        carry_over = withdrawal
 
-                    elseif withdrawl <= 0.0 #There is not enough stored to meet energy demand in t                        
+                    elseif withdrawal <= 0.0 #There is not enough stored to meet energy demand in t                        
 
                         withdrawn_energy += available_energy
 
                         carry_over = 0.0    
 
-                        grid_energy -= withdrawl
+                        grid_energy -= withdrawal
 
                     end
 
@@ -97,20 +103,22 @@ function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_out
 
            global_generation += PV_energy #GenAcum
            global_allowance = 0.49*global_generation #Disp
-           global_withdrawl += withdrawn_energy #Gastos  
-           max_surplus = max(0.0,global_allowance - global_withdrawl) #Der Legitimo
+           global_withdrawal += withdrawn_energy #Gastos  
+           max_surplus = max(0.0,global_allowance - global_withdrawal) #Der Legitimo
            carry_over = min(max_surplus,carry_over)   
                 
            results[ix] = Dict("consumer_energy" => consumer_energy,
                                "PV_energy" => PV_energy,
-                                "inyection_grid" => inyection_grid,
+                                "injection_grid" => injection_grid,
                                 "withdrawn_energy" => withdrawn_energy,
                             "grid_energy" => grid_energy,
                             "carry_over" => carry_over,
                             "global_generation" => global_generation,
-                            "global_withdrawl" => global_withdrawl,
+                            "global_withdrawal" => global_withdrawal,
                             "global_allowance" => global_allowance,
-                            "max_surplus" => max_surplus
+                            "max_surplus" => max_surplus,
+                            "peak_demand" => peak_demand,
+                            "peak_power" => peak_power
                     )     
     end
     
@@ -139,7 +147,7 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
     peak_demand = 0.0
     carry_over = 0.0
     global_allowance = 0.0
-    global_withdrawl = 0.0
+    global_withdrawal = 0.0
     global_generation = 0.0
     energy_loss = 0.0
 
@@ -158,7 +166,7 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
         withdrawn_energy = 0.0
         consumer_energy = 0.0
         PV_energy = 0.0
-        inyection_grid = 0.0
+        injection_grid = 0.0
 
         #Loop for every day of the month 
         for i in 1:m
@@ -175,7 +183,7 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
 
                balance = daily_p[t] - solar_day[t]
 
-               inyection_grid += max(0.0, -1*balance) 
+               injection_grid += max(0.0, -1*balance) 
                
                peak_power = max(peak_power, daily_p[t]) 
                
@@ -183,13 +191,13 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
 
                available_energy = carry_over + max(0.0, -1*balance)  
 
-               withdrawl = 0.0 
+               withdrawal = 0.0 
 
                if balance >= 0.0
 
-                    withdrawl = available_energy - balance
+                    withdrawal = available_energy - balance
 
-                    if withdrawl > 0.0 #There is enough stored to meet energy demand in t 
+                    if withdrawal > 0.0 #There is enough stored to meet energy demand in t 
 
                         #Book Keeping
 
@@ -197,15 +205,15 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
 
                         grid_energy += 0.0  
 
-                        carry_over = withdrawl
+                        carry_over = withdrawal
 
-                    elseif withdrawl <= 0.0 #There is not enough stored to meet energy demand in t                        
+                    elseif withdrawal <= 0.0 #There is not enough stored to meet energy demand in t                        
 
                         withdrawn_energy += available_energy
 
                         carry_over = 0.0    
 
-                        grid_energy -= withdrawl
+                        grid_energy -= withdrawal
 
                     end
 
@@ -228,20 +236,20 @@ function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_outpu
 
            global_generation += PV_energy #GenAcum
            global_allowance = 0.49*global_generation #Disp
-           global_withdrawl += withdrawn_energy #Gastos  
-           max_surplus = max(0.0,global_allowance - global_withdrawl) #Der Legitimo
+           global_withdrawal += withdrawn_energy #Gastos  
+           max_surplus = max(0.0,global_allowance - global_withdrawal) #Der Legitimo
            carry_over = min(max_surplus,carry_over)    
                 
            results[ix] = Dict("consumer_energy" => consumer_energy,
                                "PV_energy" => PV_energy,
-                                "inyection_grid" => inyection_grid,
+                                "injection_grid" => injection_grid,
                                 "withdrawn_energy" => withdrawn_energy,
                             "grid_energy" => grid_energy,
                             "peak_demand" => peak_demand,
                             "peak_power" => peak_power,
                             "carry_over" => carry_over,
                             "global_generation" => global_generation,
-                            "global_withdrawl" => global_withdrawl,
+                            "global_withdrawal" => global_withdrawal,
                             "global_allowance" => global_allowance,
                             "max_surplus" => max_surplus,
                     )
@@ -272,7 +280,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                    
     carry_over = 0.0
     global_allowance = 0.0
-    global_withdrawl = 0.0
+    global_withdrawal = 0.0
     global_generation = 0.0
     energy_loss = 0.0
 
@@ -308,7 +316,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
         grid_energy_valley = 0.0
         grid_energy_night = 0.0                
         PV_energy = 0.0
-        inyection_grid = 0.0
+        injection_grid = 0.0
 
         #Loop for every day of the month 
         for i in 1:m
@@ -331,7 +339,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                #println("---------")                   
                balance = daily_p[t] - solar_day[t]
 
-               inyection_grid += max(0.0, -1*balance) 
+               injection_grid += max(0.0, -1*balance) 
                
                #Peak demand corresponds to the peak as measured by the distribution company 
                                 
@@ -358,13 +366,13 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                                             
                available_energy = carry_over + max(0.0, -1*balance)  
 
-               withdrawl = 0.0 
+               withdrawal = 0.0 
 
                if balance >= 0.0
 
-                    withdrawl = available_energy - balance
+                    withdrawal = available_energy - balance
 
-                    if withdrawl > 0.0 #There is enough stored to meet energy demand in t 
+                    if withdrawal > 0.0 #There is enough stored to meet energy demand in t 
 
                         #Book Keeping
 
@@ -374,17 +382,17 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                         (t in valley) ? grid_energy_valley += 0.0 : true                  
                         (t in night) ? grid_energy_night += 0.0 : true                 
 
-                        carry_over = withdrawl
+                        carry_over = withdrawal
 
-                    elseif withdrawl <= 0.0 #There is not enough stored to meet energy demand in t                        
+                    elseif withdrawal <= 0.0 #There is not enough stored to meet energy demand in t                        
 
                         withdrawn_energy += available_energy
 
                         carry_over = 0.0    
                                             
-                        (t in peak) ? grid_energy_peak -= withdrawl : true
-                        (t in valley) ? grid_energy_valley -= withdrawl : true                  
-                        (t in night) ? grid_energy_night -= withdrawl : true                      
+                        (t in peak) ? grid_energy_peak -= withdrawal : true
+                        (t in valley) ? grid_energy_valley -= withdrawal : true                  
+                        (t in night) ? grid_energy_night -= withdrawal : true                      
 
                     end
 
@@ -432,15 +440,15 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                                 
            global_generation += PV_energy #GenAcum
            global_allowance = 0.49*global_generation #Disp
-           global_withdrawl += withdrawn_energy #Gastos  
-           max_surplus = max(0.0,global_allowance - global_withdrawl) #Der Legitimo
+           global_withdrawal += withdrawn_energy #Gastos  
+           max_surplus = max(0.0,global_allowance - global_withdrawal) #Der Legitimo
            carry_over = min(max_surplus,carry_over)    
                 
            results[ix] = Dict("consumer_energy_peak" => consumer_energy_peak,
                               "consumer_energy_valley" => consumer_energy_valley,
                               "consumer_energy_night" => consumer_energy_night,
                               "PV_energy" => PV_energy,
-                              "inyection_grid" => inyection_grid,
+                              "injection_grid" => injection_grid,
                               "withdrawn_energy" => withdrawn_energy,
                               "grid_energy_peak" => grid_energy_peak,
                               "grid_energy_valley" => grid_energy_valley,
@@ -453,7 +461,7 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                               "peak_power_night" => peak_power_night,
                               "carry_over" => carry_over,
                               "global_generation" => global_generation,
-                              "global_withdrawl" => global_withdrawl,
+                              "global_withdrawal" => global_withdrawal,
                               "global_allowance" => global_allowance,
                               "max_surplus" => max_surplus,
                         )     

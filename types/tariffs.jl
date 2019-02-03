@@ -2,7 +2,7 @@ mutable struct Tariff
     provider::String
     category::String
     e_cost::Array{Any}
-    p_cost::Union{Nothing,Array}
+    p_cost::Array{Any}
     increase::Float64
     access::Float64
     street_light::Float64
