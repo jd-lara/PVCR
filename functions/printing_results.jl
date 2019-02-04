@@ -155,3 +155,33 @@ function print_TMT_bills()
            
     
 end
+
+function plot_bill(bill::Dict, fields::Array{String})
+    cum_sum = Array{Float64,1}(undef, 12)
+    for i in 1:length(fields)
+        var = [bill[m]["$(fields[i])"] for m in 1:12]
+        bar(collect(1:12), bottom = cum_sum, var, label="$(fields[i])")
+        cum_sum += var
+    end
+    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+    xticks(collect(1:12));
+    xlabel("Month")
+    ylabel("Total Bill [Colones]")
+end
+
+function plot_bill(bill1::Dict, bill2::Dict, fields::Array{String})
+    cum_sum1 = Array{Float64,1}(undef, 12)
+    cum_sum2 = Array{Float64,1}(undef, 12)
+    for i in 1:length(fields)
+        var1 = [bill1[m]["$(fields[i])"] for m in 1:12]
+        bar(collect(1:12), bottom = cum_sum1, var1, color = cpalette10[i], edgecolor = "black", linewidth = 0.5, label="$(fields[i])", align="edge", width= -0.35)
+        cum_sum1 += var1
+        var2 = [bill2[m]["$(fields[i])"] for m in 1:12]
+        bar(collect(1:12), bottom = cum_sum2, var2, color = cpalette10[i], edgecolor = "black", linewidth = 0.5, align="edge", width= 0.35)
+        cum_sum2 += var2
+    end
+    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+    xticks(collect(1:12));
+    xlabel("Month")
+    ylabel("Total Bill [Colones]")
+end
