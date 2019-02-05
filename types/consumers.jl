@@ -7,6 +7,8 @@ mutable struct Residential <: Consumer
     peak_power::Union{Nothing,Array{Float64}}
     load_curve::Array{Float64}
     tariff::Tariff
+    decision_timeframe::Int64
+    rate_return::Float64
 end
 
 mutable struct CommIndus <: Consumer
@@ -16,6 +18,8 @@ mutable struct CommIndus <: Consumer
     peak_power::Union{Nothing,Array{Float64}}
     load_curve::Array{Float64}
     tariff::Tariff
+    decision_timeframe::Int64
+    rate_return::Float64
 end
 
 mutable struct TMT <: Consumer
@@ -25,6 +29,8 @@ mutable struct TMT <: Consumer
     peak_power::Union{Nothing,Array{Float64}}
     load_curve::Array{Float64}
     tariff::Tariff
+    decision_timeframe::Int64
+    rate_return::Float64
 end
 
 
