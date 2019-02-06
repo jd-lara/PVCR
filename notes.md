@@ -13,6 +13,8 @@
 
 - Energy Storage in Distribution system is done according to DVME-008-2018
 
+- Assumption about the effect in power payments to the distribution companies is that given the fact that it is possible to assess the fraction of the peak at any given point that a consumer represents, then it won't be done. But also, this would only matter for the valley times. 
+
 ## Enertiva
 
 - Depende de la rentabilidad. Mayor rentabilidad en la tarifa general y es donde hay mayor adopción. El análisis se realiza por medidores.
@@ -37,3 +39,11 @@
 - Mucha gente de residencial por encima de 500 kWh casi siempre paga efectivo. Por debajo de 500 kWh es difícil que sea rentable el proyecto.
 
  - Paper Load Curves: https://ieeexplore.ieee.org/document/7981065
+ 
+# Jorge 
+
+- Incluir el downpayment no tiene sentido la toma de decision en valor corriente 
+- Si el downpayment es 15% o menos el consumidor no lo considera 
+- Si es superior al 15% no instala. 
+- El resto considera el downpayment para ver si ahorro o no 
+- Tomo el precio y lo ajusto hasta el revenue total sea el mismo. 

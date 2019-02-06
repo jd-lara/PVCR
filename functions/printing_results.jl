@@ -1,75 +1,34 @@
-function print_residential(energy_totals::Dict)
+function print_base(energy_totals::Dict)
 
                 println("month", " ", "consumer_energy", " ", 
                                 "PV_energy", " ", 
-                                " | ",
                                 "injection_grid", " ",  
-                                "withdrawn_energy", " ", 
                                 "grid_energy", " ",
-                                " | ",
-                                "global_generation"," ", 
-                                "global_withdrawal", " ",
                                 "global_allowance", " ", 
-                                "max_surplus", " ",
-                                "carryover"," ") 
+                                "allowance", " ",
+                                "withdrawn_energy", " ", 
+                                "utility_supplied_energy", " ",
+                                "carryover"," ",
+                                "peak_power", " ",
+                                "peak_demand") 
         
         
         for i in 1:12
     
                 println(i, " ",round(energy_totals[i]["consumer_energy"], digits=2), " ", 
                                 round(energy_totals[i]["PV_energy"], digits =2), " ", 
-                                " | ",
-                                round(energy_totals[i]["injection_grid"], digits = 2), " ",  
-                                round(energy_totals[i]["withdrawn_energy"],digits=2), " ", 
+                                round(energy_totals[i]["injection_grid"], digits = 2), " ",
                                 round(energy_totals[i]["grid_energy"], digits=2), " ",
-                                " | ",
-                                round(energy_totals[i]["global_generation"], digits=2)," ", 
-                                round(energy_totals[i]["global_withdrawal"], digits=2), " ",
-                                round(energy_totals[i]["global_allowance"], digits=2), " ", 
-                                round(energy_totals[i]["max_surplus"], digits=2), " ",
-                                round(energy_totals[i]["carry_over"],digits=2), " ") 
+                                round(energy_totals[i]["global_allowance"], digits=2), " ",
+                                round(energy_totals[i]["allowance"],digits=2), " ",
+                                round(energy_totals[i]["withdrawn_energy"],digits=2), " ",
+                                round(energy_totals[i]["utility_supplied_energy"], digits=2), " ",
+                                round(energy_totals[i]["carry_over"], digits=2), " ",
+                                round(energy_totals[i]["peak_power"], digits=2), " ",
+                                round(energy_totals[i]["peak_demand"], digits=2)
+                                ) 
         
      end
-
-end
-
-function print_commercial(energy_totals::Dict)
-    
-                println("month", " ", "consumer_energy", " ", 
-                                "PV_energy", " ", 
-                                " | ",
-                                "injection_grid", " ",  
-                                "withdrawn_energy", " ", 
-                                "grid_energy", " ",
-                                " | ",
-                                "peak_power", " ",
-                                "peak_demand", " ",
-                                " | ",
-                                "global_generation"," ", 
-                                "global_withdrawal", " ",
-                                "global_allowance", " ", 
-                                "max_surplus", " ",
-                                "carry_over", " ")
-        
-
-
-           for i in 1:12
-                println(i, " ", round(energy_totals[i]["consumer_energy"], digits=2), " ", 
-                                round(energy_totals[i]["PV_energy"], digits =2), " ", 
-                                " | ",
-                                round(energy_totals[i]["injection_grid"], digits = 2), " ",  
-                                round(energy_totals[i]["withdrawn_energy"],digits=2), " ", 
-                                round(energy_totals[i]["grid_energy"], digits=2), " ",                                
-                                " | ",
-                                round(energy_totals[i]["peak_power"], digits=2), " ",
-                                round(energy_totals[i]["peak_demand"], digits=2), " ",
-                                " | ",
-                                round(energy_totals[i]["global_generation"], digits=2)," ", 
-                                round(energy_totals[i]["global_withdrawal"], digits=2), " ",
-                                round(energy_totals[i]["global_allowance"], digits=2), " ", 
-                                round(energy_totals[i]["max_surplus"], digits=2), " ",
-                                round(energy_totals[i]["carry_over"],digits=2), " ")
-        end
 
 end
 

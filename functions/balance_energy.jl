@@ -1,5 +1,5 @@
 #Residential Consumer Balancing Code
-function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_output=false)
+function annual_energy_balance(consumer::C, pvsys::PVSystem; print_output=false) where {C <: Consumer}
     
     results = Dict{Int64,Any}()
     
@@ -14,11 +14,9 @@ function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_out
     global_allowance = 0.0
     global_withdrawal = 0.0
     global_generation = 0.0
-    energy_loss = 0.0
-    peak_power = 0.0
-    peak_demand = 0.0
+    energy_loss = 0.0   
 
-    #Loop for every Month of the year 
+  #Loop for every Month of the year 
     for (ix,m) in enumerate(days_p_month)
         
         #Get solar Data with houtly resolution for the month 
@@ -27,245 +25,111 @@ function annual_energy_balance(consumer::Residential, pvsys::PVSystem; print_out
         m_h = m
 
         #Simulate month on an hourly basis 
-        #initial conditions. 
-        available_energy = 0.0
-        grid_energy = 0.0 
+        #initial conditions for the month
+        allowance = 0.0
+        utility_supplied_energy = 0.0
+        grid_energy = 0.0
         withdrawn_energy = 0.0
         consumer_energy = 0.0
         PV_energy = 0.0
         injection_grid = 0.0
-
-        #Loop for every day of the month 
-        for i in 1:m
-            var = rand(d_d, 24).+1.0
-            daily_p = (consumer.load_curve.*var)*consumer.peak_power[ix]
-            solar_day = solar_month[(((m-1)*24)+1):(((m-1)*24)+24)]
-
-            #Loop for every hour of the day  
-            for t in 1:24
-
-               consumer_energy += daily_p[t]
-
-               PV_energy +=  solar_day[t] 
-
-               balance = daily_p[t] - solar_day[t]
-
-               injection_grid += max(0.0, -1*balance) 
-                
-               peak_power = max(peak_power, daily_p[t]) 
-               
-               peak_demand = max(peak_demand, balance)    
-
-               available_energy = carry_over + max(0.0, -1*balance)  
-
-               withdrawal = 0.0 
-
-               if balance >= 0.0
-
-                    withdrawal = available_energy - balance
-
-                    if withdrawal > 0.0 #There is enough stored to meet energy demand in t 
-
-                        #Book Keeping
-
-                        withdrawn_energy += balance
-
-                        grid_energy += 0.0  
-
-                        carry_over = withdrawal
-
-                    elseif withdrawal <= 0.0 #There is not enough stored to meet energy demand in t                        
-
-                        withdrawn_energy += available_energy
-
-                        carry_over = 0.0    
-
-                        grid_energy -= withdrawal
-
-                    end
-
-               elseif balance < 0.0
-
-                    carry_over  = available_energy     
-
-               end
-
-            end #end of hourly loop 
-
-                #adjustment in case of carryover     
-                if (carry_over - grid_energy) > 0
-                    carry_over -= grid_energy
-                    withdrawn_energy += grid_energy 
-                    grid_energy = 0
-                end
-
-        end #end of month loop
-
-           global_generation += PV_energy #GenAcum
-           global_allowance = 0.49*global_generation #Disp
-           global_withdrawal += withdrawn_energy #Gastos  
-           max_surplus = max(0.0,global_allowance - global_withdrawal) #Der Legitimo
-           carry_over = min(max_surplus,carry_over)   
-                
-           results[ix] = Dict("consumer_energy" => consumer_energy,
-                               "PV_energy" => PV_energy,
-                                "injection_grid" => injection_grid,
-                                "withdrawn_energy" => withdrawn_energy,
-                            "grid_energy" => grid_energy,
-                            "carry_over" => carry_over,
-                            "global_generation" => global_generation,
-                            "global_withdrawal" => global_withdrawal,
-                            "global_allowance" => global_allowance,
-                            "max_surplus" => max_surplus,
-                            "peak_demand" => peak_demand,
-                            "peak_power" => peak_power
-                    )     
-    end
-    
-    if print_output 
-        print_residential(results)
-    end
-            
-    return results        
-            
-end   
-
-        
-#Commercial and Industrial Consumer Balancing Code        
-function annual_energy_balance(consumer::CommIndus, pvsys::PVSystem; print_output=false)
-
-    results = Dict{Int64,Any}()
-    
-    d_d = Truncated(Normal(0.0, 0.5), -0.10, 0.10)
-    d_s = Truncated(Normal(-0.2, 0.5), -0.10, 0.15)
-    days_p_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    m_h = 0
-    count = 0
-
-    # Initial conditions
-    peak_power = 0.0
-    peak_demand = 0.0
-    carry_over = 0.0
-    global_allowance = 0.0
-    global_withdrawal = 0.0
-    global_generation = 0.0
-    energy_loss = 0.0
-
-    #Loop for every Month of the year 
-    for (ix,m) in enumerate(days_p_month)
-        
-        #Get solar Data with houtly resolution for the month 
-        solar_month_base = pvsys.time_series[24*(m_h) + 1:24*(m_h+m)]
-        solar_month = [(s+rand(d_s, 1)[1])*(s > 0.1) for s in solar_month_base]*pvsys.capacity
-        m_h = m
-
-        #Simulate month on an hourly basis 
-        #initial conditions. 
-        available_energy = 0.0
-        grid_energy = 0.0 
-        withdrawn_energy = 0.0
-        consumer_energy = 0.0
-        PV_energy = 0.0
-        injection_grid = 0.0
-
-        #Loop for every day of the month 
-        for i in 1:m
-            var = rand(d_d, 24).+1.0
-            daily_p = (consumer.load_curve.*var)*consumer.peak_power[ix]
-            solar_day = solar_month[(((m-1)*24)+1):(((m-1)*24)+24)]
-
-            #Loop for every hour of the day  
-            for t in 1:24
-
-               consumer_energy += daily_p[t]
-
-               PV_energy +=  solar_day[t] 
-
-               balance = daily_p[t] - solar_day[t]
-
-               injection_grid += max(0.0, -1*balance) 
-               
-               peak_power = max(peak_power, daily_p[t]) 
-               
-               peak_demand = max(peak_demand, balance)          
-
-               available_energy = carry_over + max(0.0, -1*balance)  
-
-               withdrawal = 0.0 
-
-               if balance >= 0.0
-
-                    withdrawal = available_energy - balance
-
-                    if withdrawal > 0.0 #There is enough stored to meet energy demand in t 
-
-                        #Book Keeping
-
-                        withdrawn_energy += balance
-
-                        grid_energy += 0.0  
-
-                        carry_over = withdrawal
-
-                    elseif withdrawal <= 0.0 #There is not enough stored to meet energy demand in t                        
-
-                        withdrawn_energy += available_energy
-
-                        carry_over = 0.0    
-
-                        grid_energy -= withdrawal
-
-                    end
-
-               elseif balance < 0.0
-
-                    carry_over  = available_energy     
-
-               end
-
-            end #end of hourly loop 
-
-                #adjustment in case of carryover     
-                if (carry_over - grid_energy) > 0
-                    carry_over -= grid_energy
-                    withdrawn_energy += grid_energy 
-                    grid_energy = 0
-                end
-
-        end #end of month loop
-
-           global_generation += PV_energy #GenAcum
-           global_allowance = 0.49*global_generation #Disp
-           global_withdrawal += withdrawn_energy #Gastos  
-           max_surplus = max(0.0,global_allowance - global_withdrawal) #Der Legitimo
-           carry_over = min(max_surplus,carry_over)    
-                
-           results[ix] = Dict("consumer_energy" => consumer_energy,
-                               "PV_energy" => PV_energy,
-                                "injection_grid" => injection_grid,
-                                "withdrawn_energy" => withdrawn_energy,
-                            "grid_energy" => grid_energy,
-                            "peak_demand" => peak_demand,
-                            "peak_power" => peak_power,
-                            "carry_over" => carry_over,
-                            "global_generation" => global_generation,
-                            "global_withdrawal" => global_withdrawal,
-                            "global_allowance" => global_allowance,
-                            "max_surplus" => max_surplus,
-                    )
         peak_power = 0.0
-        peak_demand = 0.0             
+        peak_demand = 0.0
+        
+        # Initial monthly conditions
+        peak = [10, 11, 12, 17, 18, 19]
+        valley = [6, 7, 8, 9, 13, 14, 15, 16]
+        night = [20, 21, 22, 23, 24, 1, 2, 3, 4, 5]                
+    
+        consumer_energy_peak = 0.0
+        consumer_energy_valley = 0.0
+        consumer_energy_night = 0.0
+        
+        grid_energy_peak = 0.0
+        grid_energy_valley = 0.0
+        grid_energy_night = 0.0 
+
+        #Loop for every day of the month 
+        for i in 1:m
+            var = rand(d_d, 24).+1.0
+            daily_p = (consumer.load_curve.*var)*consumer.peak_power[ix]
+            solar_day = solar_month[(((m-1)*24)+1):(((m-1)*24)+24)]
+
+            #Loop for every hour of the day  
+            for t in 1:24
+
+               consumer_energy += daily_p[t]
             
-    end
+               (t in peak) ?   consumer_energy_peak += daily_p[t] : true
+               (t in valley) ? consumer_energy_valley += daily_p[t] : true                  
+               (t in night) ?  consumer_energy_night += daily_p[t] : true  
+
+               PV_energy +=  solar_day[t] 
+
+               balance = daily_p[t] - solar_day[t]
+               
+               (t in peak) ? grid_energy_peak += max(0.0,balance) : true
+               (t in valley) ? grid_energy_valley += max(0.0,balance) : true                  
+               (t in night) ? grid_energy_night += max(0.0,balance) : true 
+                
+               grid_energy = grid_energy_peak + grid_energy_valley + grid_energy_night  
+                
+               injection_grid += max(0.0, -1*balance) 
+            
+               peak_power = max(peak_power, daily_p[t]) 
+               
+               peak_demand = max(peak_demand, balance)                    
+
+            end #end of hourly loop 
+        
+        
+        
+        end #end of daily loop
+    
+            global_generation += PV_energy #Total Energy from Rooftop PV
+            global_allowance = 0.49*global_generation - global_withdrawal # Uses the acumulated withdrawls up to month ix-1
+            allowance = min(injection_grid+carry_over, global_allowance)
+            withdrawn_energy = min(min(grid_energy,injection_grid+carry_over),allowance) #Withdrawn Energy From the Grid
+            utility_supplied_energy = max(grid_energy - injection_grid - carry_over,0.0)
+             
+            #Update quantities for next month
+            carry_over = max(allowance - withdrawn_energy, 0) 
+            global_withdrawal += withdrawn_energy #Total Energy withdrawn resulting from injections into the grid
+            
+          utility = Dict("consumer_energy_peak" => consumer_energy_peak,   
+                    "consumer_energy_valley" => consumer_energy_valley,
+                    "consumer_energy_night" => consumer_energy_night,
+                    "grid_energy_peak" => grid_energy_peak,   
+                    "grid_energy_valley" => grid_energy_valley,
+                    "grid_energy_night" =>  grid_energy_night
+               )
+        
+           results[ix] = Dict("consumer_energy" => consumer_energy,
+                   "PV_energy" => PV_energy,
+                    "injection_grid" => injection_grid,
+                    "withdrawn_energy" => withdrawn_energy,
+                    "utility_supplied_energy" => utility_supplied_energy,
+                "grid_energy" => grid_energy,
+                "peak_demand" => peak_demand,
+                "peak_power" => peak_power,
+                "carry_over" => carry_over,
+                "allowance" => allowance,
+                "global_generation" => global_generation,
+                "global_withdrawal" => global_withdrawal,
+                "global_allowance" => global_allowance,
+                "utility_balance" => utility)
+        
+
+    
+    end #end of monthly loop
     
     if print_output 
-        print_commercial(results)
+        print_base(results)
     end
-                    
+            
     return results        
             
-end   
-                
+end          
                 
 #TMT Consumer Balancing Code        
 function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=false)     
