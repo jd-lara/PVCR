@@ -32,6 +32,36 @@ function PV_cashflow(consumer::Consumer, system::PVSystem, financial_terms::Fina
         payment = amortize(financial_terms.apr/12, financial_terms.term*12, PV*(1-financial_terms.downpayment))
     else
         #dirty way to have 0 payments, needs some fixing later
+        PV = 0.0
+		payment = amortize(financial_terms.apr/12, financial_terms.term*12, 0.0)    
+    end
+
+    bill_savings = PV_savings(consumer, system; tariff_increase=tariff_increase)
+      
+    for y in 1:financial_terms.term
+            
+        for m in 1:12
+
+            bill_savings[m,y] = bill_savings[m,y] - payment[4]
+
+        end
+        
+    end
+	
+	bill_savings[1,1] -= PV*(financial_terms.downpayment)
+
+    return bill_savings
+        
+end
+	
+function PV_cashflow(consumer::Residential, system::PVSystem, financial_terms::Financial; tariff_increase=true)
+    
+    #println(consumer.econsumption, " ", system.capacity)
+    if system.capacity > 0.0
+        PV = PVCost(system,financial_terms.XhR)
+        payment = amortize(financial_terms.apr/12, financial_terms.term*12, PV*(1-financial_terms.downpayment))
+    else
+        #dirty way to have 0 payments, needs some fixing later
         payment = amortize(financial_terms.apr/12, financial_terms.term*12, 0.0)    
     end
 
@@ -49,7 +79,7 @@ function PV_cashflow(consumer::Consumer, system::PVSystem, financial_terms::Fina
 
     return bill_savings
         
-end
+end	
     
 function optimal_pv(consumer::Consumer, system::PVSystem, capacity_range, financial_terms::Financial; tariff_increase=true)
     
