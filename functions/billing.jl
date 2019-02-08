@@ -139,7 +139,9 @@ function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = fal
                                   firefighters(energy_dict["consumer_energy"], counterfactual_energy_cost+counterfactual_demand_cost)                   
 
     bill["total_savings"] = bill["counterfactual_cost"] - bill["total_cost"]                    
-                    
+    
+    bill["savings"] = savings					
+					
     if print_output
             println(round(bill["grid_cost"], digits=2), " ",
                     round(bill["withdrawn_energy_cost"], digits =2), " ",
@@ -228,15 +230,25 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
                                   VAT(counterfactual_total_grid_energy,  counterfactual_grid_taxable_cost) +
                                   firefighters(counterfactual_total_grid_energy,  counterfactual_grid_taxable_cost)                       
                     
-    bill["savings_energy_cost_peak"] = counterfactual_energy_cost_peak - grid_energy_cost_peak
-    bill["savings_energy_cost_valley"] = counterfactual_energy_cost_valley - grid_energy_cost_valley
-    bill["savings_energy_cost_night"] = counterfactual_energy_cost_night - grid_energy_cost_night
-    bill["savings_demand_charge_peak"] =  counterfactual_demand_cost_peak - grid_demand_cost_peak
+    bill["savings_energy_cost_peak"]     = counterfactual_energy_cost_peak - grid_energy_cost_peak
+    bill["savings_energy_cost_valley"]   = counterfactual_energy_cost_valley - grid_energy_cost_valley
+    bill["savings_energy_cost_night"]    = counterfactual_energy_cost_night - grid_energy_cost_night
+    bill["savings_demand_charge_peak"]   =  counterfactual_demand_cost_peak - grid_demand_cost_peak
     bill["savings_demand_charge_valley"] = counterfactual_demand_cost_valley - grid_demand_cost_valley
-    bill["savings_demand_charge_night"] = counterfactual_demand_cost_night - grid_demand_cost_night     
+    bill["savings_demand_charge_night"]  = counterfactual_demand_cost_night - grid_demand_cost_night     
     
 	bill["total_savings"] = bill["counterfactual_cost"] -   bill["total_cost"]          
 
+    savings["savings_energy_cost_peak"]     = bill["savings_energy_cost_peak"]   
+	savings["savings_energy_cost_valley"] = bill["savings_energy_cost_valley"] 
+	savings["savings_energy_cost_night"]  = bill["savings_energy_cost_night"]  
+	savings["savings_demand_charge_peak"] = bill["savings_demand_charge_peak"] 
+	savings["savings_demand_charge_valley"]= bill["savings_demand_charge_valley"]
+	savings["savings_demand_charge_night"]  = bill["savings_demand_charge_night"]
+					
+	bill["savings"] = savings					
+	
+					
     if print_output
             println(round(bill["grid_energy_cost_peak"], digits=2), " ",    
                     round(bill["grid_energy_cost_valley"], digits=2), " ",
