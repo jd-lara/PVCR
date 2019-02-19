@@ -1,17 +1,21 @@
 function irr(annuity::Array{Float64})
     
-    if sum(annuity) <= 0.0
-        return 0.0
-    end
-    
     tvmnpv(i,annuity)=begin
          n=collect(1:length(annuity));
          sum(annuity./(1+i).^n)
         end
+	
+	if tvmnpv(0.0,annuity) <= 1.0
+        return 0.0
+    end
+    
+	if tvmnpv(0.99, annuity) >= 0
+        return 99.9
+    end
     
     f(x)=tvmnpv(x, annuity)
     
-    return fzero(f, [0.0, 1.0])
+    return find_zeros(f, 0, 1)
     
 end
 
