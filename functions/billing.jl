@@ -1,6 +1,7 @@
 include("taxes.jl")
+include("utility_revenue.jl")
 
-function monthly_bill(energy_dict::Dict, consumer::Residential; print_output = false, tax_cutoff = 280)
+function monthly_bill(energy_dict::Dict, consumer::Residential; print_output = false, tax_cutoff = 280, SD=SD)
     
     savings = Dict{String, Any}()
     bill = Dict{String,Any}()
@@ -49,6 +50,8 @@ function monthly_bill(energy_dict::Dict, consumer::Residential; print_output = f
     bill["total_savings"] = bill["counterfactual_cost"] - bill["total_cost"]
     
     bill["savings"] = savings
+	
+	utility_revenue_change(bill, SD)
 
     if print_output
             println(round(bill["grid_cost"], digits=2), " ",
@@ -140,7 +143,9 @@ function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = fal
 
     bill["total_savings"] = bill["counterfactual_cost"] - bill["total_cost"]                    
     
-    bill["savings"] = savings					
+    bill["savings"] = savings	
+	
+	utility_revenue_change(bill, SD)				
 					
     if print_output
             println(round(bill["grid_cost"], digits=2), " ",
@@ -160,7 +165,7 @@ function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = fal
 end
 
 
-function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
+function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false, SD=SD)
 	
 	savings = Dict{String, Any}()				
     bill = Dict{String,Any}()
@@ -195,7 +200,7 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
     bill["grid_demand_charge_valley"] = grid_demand_cost_valley
     bill["grid_demand_charge_night"] = grid_demand_cost_night                                
 
-    grid_taxable_cost = grid_energy_cost_peak + grid_energy_cost_valley + grid_energy_cost_night + grid_demand_cost_peak + grid_demand_cost_valley + grid_demand_cost_night 
+    grid_taxable_cost = grid_energy_cost_peak + grid_energy_cost_valley + grid_energy_cost_night + grid_demand_cost_peak + grid_demand_cost_valley + grid_demand_cost_night + bill["withdrawn_energy_cost"]
 					
 	 bill["counterfactual_energy_cost_peak"] = counterfactual_energy_cost_peak
     bill["counterfactual_energy_cost_valley"] = counterfactual_energy_cost_valley
@@ -212,12 +217,13 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
 
     bill["street_light"] = street_light(grid_energy,  consumer.tariff.street_light)  
 	savings["street_light"] =  street_light(counterfactual_total_grid_energy,  consumer.tariff.street_light) - bill["street_light"]
+	
 					
-    bill["VAT"] = VAT(grid_energy, grid_taxable_cost + bill["withdrawn_energy_cost"]) 
+    bill["VAT"] = VAT(grid_energy, grid_taxable_cost) 
 	savings["VAT"] = VAT(counterfactual_total_grid_energy,  counterfactual_grid_taxable_cost) - bill["VAT"]	
 					
-    bill["firefighters"] = firefighters(grid_energy, grid_taxable_cost + bill["withdrawn_energy_cost"])   
-	savings["firefighters"] = firefighters(counterfactual_total_grid_energy,  counterfactual_grid_taxable_cost) - bill["firefighters"]				
+    bill["firefighters"] = firefighters(grid_energy, grid_taxable_cost)   
+	savings["firefighters"] = firefighters(counterfactual_total_grid_energy,counterfactual_grid_taxable_cost) - bill["firefighters"]				
                     
     bill["total_cost"] = grid_taxable_cost + 
                                   bill["street_light"] + 
@@ -242,12 +248,14 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
     savings["savings_energy_cost_peak"]     = bill["savings_energy_cost_peak"]   
 	savings["savings_energy_cost_valley"] = bill["savings_energy_cost_valley"] 
 	savings["savings_energy_cost_night"]  = bill["savings_energy_cost_night"]  
+	
 	savings["savings_demand_charge_peak"] = bill["savings_demand_charge_peak"] 
 	savings["savings_demand_charge_valley"]= bill["savings_demand_charge_valley"]
 	savings["savings_demand_charge_night"]  = bill["savings_demand_charge_night"]
 					
 	bill["savings"] = savings					
 	
+	utility_revenue_change(bill, SD)				
 					
     if print_output
             println(round(bill["grid_energy_cost_peak"], digits=2), " ",    
@@ -275,3 +283,4 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false)
     return bill
 
 end
+				

@@ -34,6 +34,15 @@ function annual_energy_balance(consumer::C, pvsys::PVSystem; print_output=false)
         injection_grid = 0.0
         peak_power = 0.0
         peak_demand = 0.0
+		
+		peak_power_peak = 0.0
+        peak_demand_peak = 0.0      
+        
+		peak_power_valley = 0.0
+        peak_demand_valley = 0.0            
+        
+		peak_power_night = 0.0                
+        peak_demand_night = 0.0
         
         # Initial monthly conditions
         peak = [10, 11, 12, 17, 18, 19]
@@ -77,7 +86,29 @@ function annual_energy_balance(consumer::C, pvsys::PVSystem; print_output=false)
             
                peak_power = max(peak_power, daily_p[t]) 
                
-               peak_demand = max(peak_demand, balance)                    
+               peak_demand = max(peak_demand, balance)    
+				
+			   #Peak demand corresponds to the peak as measured by the distribution company 
+                                
+               #(t in peak) ? println("peak d"," ",  peak_demand_peak, " ", balance, " ", max(0.0, peak_demand_peak, max(0.0,balance)) ) : true
+               (t in peak) ? peak_demand_peak = max(0.0, peak_demand_peak, max(0.0,balance)) : true
+                 
+               #(t in valley) ? println("valley d", " ", peak_demand_valley," ",  balance, " ", max(0.0, peak_demand_valley, max(0.0,balance)) ) : true      
+               (t in valley) ? peak_demand_valley = max(0.0, peak_demand_valley, max(0.0,balance)) : true    
+                               
+               #(t in night) ? println("night d", " ", peak_demand_night, " ", balance, " ", max(0.0, peak_demand_night, max(0.0,balance)) ) : true 
+               (t in night) ? peak_demand_night = max(0.0, peak_demand_night, max(0.0,balance)) : true                  
+                
+               #Peak power corresponds to the peak of the consumer load
+                                
+               #(t in peak) ? println("peak p", " ", peak_power_peak, " ", daily_p[t], " ", max(0.0, peak_power_peak, daily_p[t]) ) : true                    
+               (t in peak) ? peak_power_peak = max(0.0, peak_power_peak, daily_p[t]) : true
+                      
+               #(t in valley) ? println("valley p", " ", peak_power_valley, " ", daily_p[t], " ", max(0.0, peak_power_valley, daily_p[t])) : true          
+               (t in valley) ? peak_power_valley = max(0.0, peak_power_valley, daily_p[t]) : true  
+               
+               #(t in night) ? println("night p", " ", peak_power_night, " ", daily_p[t], " ", max(0.0, peak_power_night, daily_p[t]) ) : true                 
+               (t in night) ? peak_power_night = max(0.0, peak_power_night, daily_p[t]) : true  
 
             end #end of hourly loop 
         
@@ -100,8 +131,15 @@ function annual_energy_balance(consumer::C, pvsys::PVSystem; print_output=false)
                     "consumer_energy_night" => consumer_energy_night,
                     "grid_energy_peak" => grid_energy_peak,   
                     "grid_energy_valley" => grid_energy_valley,
-                    "grid_energy_night" =>  grid_energy_night
+                    "grid_energy_night" =>  grid_energy_night,
+					"consumer_demand_peak" => peak_power_peak,   
+                    "consumer_demand_valley" => peak_power_valley,
+                    "consumer_demand_night" => peak_power_night,
+                    "grid_demand_peak" => peak_demand_peak,   
+                    "grid_demand_valley" => peak_demand_valley,
+                    "grid_demand_night" =>  peak_demand_night
                )
+		
         
            results[ix] = Dict("consumer_energy" => consumer_energy,
                    "PV_energy" => PV_energy,
@@ -286,8 +324,15 @@ function annual_energy_balance(consumer::TMT, pvsys::PVSystem; print_output=fals
                     "consumer_energy_night" => consumer_energy_night,
                     "grid_energy_peak" => grid_energy_peak,   
                     "grid_energy_valley" => grid_energy_valley,
-                    "grid_energy_night" =>  grid_energy_night
+                    "grid_energy_night" =>  grid_energy_night,
+					"consumer_demand_peak" => peak_power_peak,   
+                    "consumer_demand_valley" => peak_power_valley,
+                    "consumer_demand_night" => peak_power_night,
+                    "grid_demand_peak" => peak_demand_peak,   
+                    "grid_demand_valley" => peak_demand_valley,
+                    "grid_demand_night" =>  peak_demand_night
                )
+               
         	
            results[ix] = Dict("consumer_energy_peak" => consumer_energy_peak,
                               "consumer_energy_valley" => consumer_energy_valley,
