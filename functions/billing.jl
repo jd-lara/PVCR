@@ -67,7 +67,7 @@ function monthly_bill(energy_dict::Dict, consumer::Residential; print_output = f
 
 end
 
-function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = false)
+function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = false, SD=SD)
     
     savings = Dict{String, Any}()
     bill = Dict{String,Any}()
@@ -93,7 +93,7 @@ function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = fal
     
     #demand charges        
             
-    if !(energy_dict["grid_energy"] <= 3000)        
+    if !(energy_dict["grid_energy"] <= consumer.tariff.e_cost[1][1][end])        
             
         
         if energy_dict["peak_demand"] <= consumer.tariff.p_cost[1][1][end]
@@ -103,7 +103,7 @@ function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = fal
         end
     end
                 
-    if !(energy_dict["consumer_energy"] <= 3000)
+    if !(energy_dict["consumer_energy"] <= consumer.tariff.e_cost[1][1][end])
                     
         if energy_dict["peak_power"] <= consumer.tariff.p_cost[1][1][end]
             counterfactual_demand_cost = consumer.tariff.p_cost[1][2]

@@ -114,11 +114,13 @@ function print_TMT_bills()
     
 end
 
+stripChar = (s, r) -> replace(s, Regex("[$r]") => " ")
+
 function plot_bill(bill::Dict, fields::Array{String}, digits::Int64 = 1)
 	cum_sum = Array{Float64,1}(undef, 12)
     for i in 1:length(fields)
         var = [bill[m]["$(fields[i])"] for m in 1:12]
-        bar(collect(1:12), bottom = cum_sum, var, label="$(fields[i])", edgecolor = "black", linewidth = 0.3)
+        bar(collect(1:12), bottom = cum_sum, var, label=stripChar("$(fields[i])", "_"), edgecolor = "black", linewidth = 0.3)
         cum_sum += var
     end
     legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
@@ -127,6 +129,7 @@ function plot_bill(bill::Dict, fields::Array{String}, digits::Int64 = 1)
 	xlabel("Month")
     ylabel("Total Bill [Colones]")
 	ylim(0,y_ul)
+	title("Consumer Monthly Electric Utility Bill Breakdown")
 end
 
 function plot_bill(bill1::Dict, bill2::Dict, fields::Array{String}, digits::Int64 = 1)
@@ -135,7 +138,7 @@ function plot_bill(bill1::Dict, bill2::Dict, fields::Array{String}, digits::Int6
     
 	for i in 1:length(fields)
         var1 = [bill1[m]["$(fields[i])"] for m in 1:12]
-        bar(collect(1:12) .- 0.03, bottom = cum_sum1, var1, color = cpalette10[i], edgecolor = "black", linewidth = 0.3, label="$(fields[i])", align="edge", width= -0.4)
+        bar(collect(1:12) .- 0.03, bottom = cum_sum1, var1, color = cpalette10[i], edgecolor = "black", linewidth = 0.3, label=stripChar("$(fields[i])", "_"), align="edge", width= -0.4)
         cum_sum1 += var1
         var2 = [bill2[m]["$(fields[i])"] for m in 1:12]
         bar(collect(1:12) .+ 0.03, bottom = cum_sum2, var2, color = cpalette10[i], edgecolor = "black", linewidth = 0.3, align="edge", width= 0.4)
@@ -147,6 +150,7 @@ function plot_bill(bill1::Dict, bill2::Dict, fields::Array{String}, digits::Int6
 	xlabel("Month")
     ylabel("Total Bill [Colones]")
 	ylim(0,max(y_ul1,y_ul2))
+	title("Consumer's Change in Montly Electric Bill")
 end
 
 
@@ -154,11 +158,11 @@ function plot_savings(bill::Dict, digits::Int64 = 1)
 	cum_sum = Array{Float64,1}(undef, 12)
 	for i in keys(bill[1]["savings"])
 		var = [bill[m]["savings"][i] for m in 1:12]
-		bar(collect(1:12), bottom = cum_sum, var, label=i, edgecolor = "black", linewidth = 0.3)   
+		bar(collect(1:12), bottom = cum_sum, var, label=stripChar(i, "_"), edgecolor = "black", linewidth = 0.3)   
 		cum_sum += var
 	end
 	var1 = [bill[m]["withdrawn_energy_cost"] for m in 1:12]
-	bar(collect(1:12), -1*var1, label="withdrawn_energy_cost", edgecolor = "black", linewidth = 0.3)   
+	bar(collect(1:12), -1*var1, label="withdrawn energy cost", edgecolor = "black", linewidth = 0.3)   
 	legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
 	xticks(collect(1:12));
 	y_ul = maximum([round(bill[m]["counterfactual_cost"], RoundUp, sigdigits = digits) for m in 1:12])
@@ -167,6 +171,7 @@ function plot_savings(bill::Dict, digits::Int64 = 1)
     ylabel("Total Savings [Colones]")
 	ylim(y_lb,y_ul)
 	axhline(0, color="black", lw=0.6)
+	title("Consumer Monthly Electric Utility Bill Savings")
 end
 
 function plot_utility_change(bill::Dict, digits::Int64 = 1)
@@ -175,14 +180,14 @@ function plot_utility_change(bill::Dict, digits::Int64 = 1)
 		if !(i in ["consumer_savings", "losses"]) 
             var = [bill[m]["utility_change"][i] for m in 1:12]
             sum(var .< 0) > 0  ? @info("Losses for energy displacement") : true
-			bar(collect(1:12), bottom = cum_sum, var, label=i, edgecolor = "black", linewidth = 0.3)   
+			bar(collect(1:12), bottom = cum_sum, var, label=stripChar(i, "_"), edgecolor = "black", linewidth = 0.3)   
             cum_sum += var
         end
 	end
 	var1 = [bill[m]["utility_change"]["consumer_savings"] for m in 1:12]
-	bar(collect(1:12), var1, label="consumer_savings", edgecolor = "black", linewidth = 0.3) 
+	bar(collect(1:12), var1, label="consumer savings", edgecolor = "black", linewidth = 0.3) 
     var2 = [bill[m]["utility_change"]["losses"] for m in 1:12]
-    plot(collect(1:12), var2, label = "net_losses", color="red")
+    plot(collect(1:12), var2, label = "net losses", color="red")
 	legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
 	xticks(collect(1:12));
 	y_ul = maximum([round(bill[m]["counterfactual_cost"], RoundUp, sigdigits = digits) for m in 1:12])
@@ -191,4 +196,5 @@ function plot_utility_change(bill::Dict, digits::Int64 = 1)
     ylabel("Total Change for Utility [Colones]")
 	ylim(y_lb,y_ul)
 	axhline(0, color="black", lw=0.6)
+	title("Utility Monthly Revenue Change")
 end
