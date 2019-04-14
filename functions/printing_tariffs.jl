@@ -1,21 +1,28 @@
-#=
-function print_tariff(tariff::Tariff)
-    
-    if tariff.category == "Residential"
-        x = []
-        y = []
-        for block in tariff.e_cost 
-            x = vcat(x,block[1])
-            y = vcat(y, block[2]*ones(length(block[1])))
-        end
-    
-    elseif tariff.category == "Residential"    
-    
-    end    
-        
-    
-        
-    plot(x,y)
+bulk_tariff = [
+     37.54
+     37.54 
+     37.54 
+     37.54 
+     37.54
+     44.22
+     44.22
+     44.22
+     44.22
+     53.98
+     53.98
+     53.98
+     44.22
+     44.22
+     44.22
+     44.22
+     53.98
+     53.98
+     53.98
+     37.54
+     37.54 
+     37.54 
+     37.54 
+     37.54    
+]
 
-end
-=#
+bulk_tariff = vcat(vcat(bulk_tariff,bulk_tariff),bulk_tariff)
