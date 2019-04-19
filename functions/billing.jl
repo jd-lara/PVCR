@@ -20,7 +20,7 @@ function monthly_bill(energy_dict::Dict, consumer::Residential; print_output = f
     
     bill["Balance"] = energy_dict;
     
-    bill["grid_cost"] = grid_energy_cost
+    bill["grid_cost"] = grid_energy_cost < 0.01 ? consumer.tariff.min_cost : grid_energy_cost
     bill["withdrawn_energy_cost"] = energy_dict["withdrawn_energy"]*consumer.tariff.access
 
     bill["total_energy_cost"] = grid_energy_cost + bill["withdrawn_energy_cost"]
@@ -115,7 +115,7 @@ function monthly_bill(energy_dict::Dict, consumer::CommIndus; print_output = fal
 
     bill["Balance"] = energy_dict;
     bill["counterfactual_energy_cost"] = counterfactual_energy_cost     
-    bill["grid_cost"] = grid_energy_cost
+    bill["grid_cost"] = grid_energy_cost < 0.01 ? consumer.tariff.min_cost : grid_energy_cost
     
     savings["grid_energy_savings"] = counterfactual_energy_cost - grid_energy_cost                
     bill["withdrawn_energy_cost"] = energy_dict["withdrawn_energy"]*consumer.tariff.access
@@ -200,7 +200,9 @@ function monthly_bill(energy_dict::Dict, consumer::TMT; print_output = false, SD
     bill["grid_demand_charge_valley"] = grid_demand_cost_valley
     bill["grid_demand_charge_night"] = grid_demand_cost_night                                
 
-    grid_taxable_cost = grid_energy_cost_peak + grid_energy_cost_valley + grid_energy_cost_night + grid_demand_cost_peak + grid_demand_cost_valley + grid_demand_cost_night + bill["withdrawn_energy_cost"]
+	grid_taxable_energy_cost = (grid_energy_cost_peak + grid_energy_cost_valley + grid_energy_cost_night) < 0.01 ? consumer.tariff.min_cost : (grid_energy_cost_peak + grid_energy_cost_valley + grid_energy_cost_night)				
+					
+    grid_taxable_cost = grid_taxable_energy_cost + grid_demand_cost_peak + grid_demand_cost_valley + grid_demand_cost_night + bill["withdrawn_energy_cost"]
 					
 	 bill["counterfactual_energy_cost_peak"] = counterfactual_energy_cost_peak
     bill["counterfactual_energy_cost_valley"] = counterfactual_energy_cost_valley

@@ -8,6 +8,7 @@ mutable struct Tariff
     street_light::Float64
     access_increase::Float64
     behaviour::Array{Float64}
+	min_cost::Float64
 end
 
 

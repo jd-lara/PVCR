@@ -26,3 +26,5 @@ PVTMT = PVSystem(30.0,
 
 #Financials for the system
 BAC1 = Financial(0.045, 0.085, 5, 0.25, 600.0);
+
+discount_factor = [(1/(1+0.0406)^ix) for ix in 1:10]

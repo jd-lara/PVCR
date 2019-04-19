@@ -29,7 +29,7 @@ Y el cálculo interno de CNFL para la facturación sería:
 
 Extracción de lo generado por el  sistema fotovoltaico y guardado en la red (kWh) * Tarifa de acceso) + Energía eléctrica adicional comprada a la empresa distribuidora (kWh a la tarifa vigente) = Facturación mensual de energía.
 
-~~Si la energía comprada a la empresa distribuidora es ≤ 30 kWh se paga la tarifa mínima.~~
+**Si la energía comprada a la empresa distribuidora es ≤ 30 kWh se paga la tarifa mínima.**
 Sobre este total se calcula el alumbrado público y el Tributo de Bomberos.
 Sobre la energía comprada a la empresa distribuidora se paga el impuesto de ventas.
 En todas las facturaciones debe considerarse el cargo por Alumbrado Público, Tributo de Bomberos, ambos sobre el total extraído y el Impuesto de ventas cuando haya energía vendida por la empresa distribuidora.
@@ -60,10 +60,18 @@ En todas las facturaciones debe considerarse el cargo por Alumbrado Público, Tr
 
  - Paper Load Curves: https://ieeexplore.ieee.org/document/7981065
  
-# Jorge 
+## Jorge 
 
 - Incluir el downpayment no tiene sentido la toma de decision en valor corriente 
 - Si el downpayment es 15% o menos el consumidor no lo considera 
 - Si es superior al 15% no instala. 
 - El resto considera el downpayment para ver si ahorro o no 
 - Tomo el precio y lo ajusto hasta el revenue total sea el mismo. 
+
+## Pending
+
+ - ~~Apply Minimum payment always in current tariff scheme ~~
+ - ~~Review of Tax application~~ 
+ - ~~Dicounted Cashflow for utilities ~~ Discount Rate: 4.06%
+ - ~~Base Billings with 0 adoption~~
+ - Tidy up Neutral tariff application

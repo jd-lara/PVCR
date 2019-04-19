@@ -1,6 +1,6 @@
 function street_light(energy::Float64, cost::Float64)
         
-    return 40*cost + min(50000,max(0,(energy - 40)))*cost
+    return 30*cost + min(50000,max(0,(energy - 30)))*cost
 
 end
 

@@ -53,3 +53,32 @@ function PV_losses(consumer_input::Consumer, system::PVSystem, SD::Tariff; tarif
     return total_losses
         
 end
+	
+function utility_revenue(consumer_input::Consumer, system::PVSystem, SD::Tariff; tariff_increase=true)
+    
+    consumer = deepcopy(consumer_input)
+    
+	utility_tariff = deepcopy(SD)	
+		
+	total_revenue = Array{Float64,2}(undef,12,consumer.decision_timeframe)
+    
+    for y in 1:consumer.decision_timeframe
+                
+        ebalance = annual_energy_balance(consumer, system, print_output=false);
+        
+        for m in 1:12
+
+            bill = monthly_bill(ebalance[m], consumer, SD = utility_tariff, print_output=false)
+
+            total_revenue[m,y] = bill["counterfactual_cost"]
+
+        end
+        
+        tariff_increase ? increase_tariff!(consumer) : true
+		tariff_increase ? increase_tariff!(utility_tariff) : true	
+        
+    end
+
+    return total_revenue
+        
+end	
