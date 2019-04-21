@@ -7,6 +7,7 @@ using Random
 using Roots
 
 Random.seed!(123)
+PyPlot.svg(true)
 
 cpalette10 = [
 "#1f77b4"
