@@ -22,13 +22,19 @@ tariff_names = Dict([(1, "Residential"),
 (11, "Promocional con potencia"),
 (12, "Media tensi—n a")])
 
-# This function creates new arrays that contains all values with valid ENERGIA_GENERADA and CONSUMO_NATURAL
+# This function cleans up the data for a particular utility+tariff
 function create_consumption_and_generation_arrays(utility_bill_df)    
-    nothing_missing_df = filter(row -> (!ismissing(row.ENERGIA_GENERADA) && !ismissing(row.CONSUMO_NATURAL)), utility_bill_df)
+    # Only keep entries with valid ENERGIA_GENERADA and CONSUMO_NATURAL
+    cleaned_df = filter(row -> (!ismissing(row.ENERGIA_GENERADA) && !ismissing(row.CONSUMO_NATURAL)), utility_bill_df)
+    
+    # Only keep entries with PV system output > 100 kWh per month (this would mean it's a roughly 1kW system)
     string_to_float(str) = tryparse(Float64, str)
+    cleaned_df[:CONSUMO_NATURAL] = map(string_to_float, cleaned_df[:CONSUMO_NATURAL])
+    cleaned_df = filter(row -> (row.CONSUMO_NATURAL > 100), cleaned_df)
+    
     consumption_and_generation = [[],[]]
-    consumption_and_generation[1] = map(string_to_float, nothing_missing_df[:CONSUMO_NATURAL])
-    consumption_and_generation[2] = collect(skipmissing(nothing_missing_df[:ENERGIA_GENERADA]))
+    consumption_and_generation[1] = cleaned_df[:CONSUMO_NATURAL]
+    consumption_and_generation[2] = collect(skipmissing(cleaned_df[:ENERGIA_GENERADA]))
     return consumption_and_generation
 end
     
