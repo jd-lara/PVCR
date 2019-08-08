@@ -8,8 +8,6 @@
 
 using PyPlot
 
-pyplot()
-
 tariff_names = Dict([(1, "Residential"),
 (2, "Residencial horaria"),
 (4, "Commercial y services mon-mica"),
