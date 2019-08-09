@@ -1,7 +1,30 @@
 using Pandas
+using PyCall
+
+# Eventually move run_solar_data_through_sam_ssc here
+
+# This function is completely unnecessary right now, I'm just keeping it here as reference in case it's useful in the future
+@pyimport pypvwatts;
+function predict_solar_output_at_location(lat=9.817934,lon=-84.070552)
+    PVWatts = pypvwatts.PVWatts
+    # Get api key
+    credential_file = open("nrel-credentials.txt")
+    nrel_credentials = readlines(credential_file)
+        # You must have an NSRDB api key
+    api_key = nrel_credentials[4]
+    close(credential_file)
+    
+    
+    PVWatts.api_key = api_key
+    result = PVWatts.request(
+        system_capacity=4, module_type=1, array_type=1,
+        azimuth=190, tilt=30, dataset="tmy2",
+        losses=13, lat=lat, lon=lon)
+    println(result.ac_annual)
+end
 
 function get_nsrdb_raw_solar_data(lat,lon,year)
-    # Declare all variables as strings. Spaces must be replaced with '+', i.e., change 'John Smith' to 'John+Smith'.
+    # Declare all variables as strings. Spaces must be replaced with "+", i.e., change "John Smith" to "John+Smith".
 
     # Set the attributes to extract (e.g., dhi, ghi, etc.), separated by commas.
     attributes = "ghi,dhi,dni,wind_speed,air_temperature,solar_zenith_angle"
@@ -9,11 +32,11 @@ function get_nsrdb_raw_solar_data(lat,lon,year)
     # Set leap year to true or false. True will return leap day data if present, false will not.
     leap_year = "false"
 
-    # Set time interval in minutes, i.e., '30' is half hour intervals. Valid intervals are 30 & 60.
+    # Set time interval in minutes, i.e., "30" is half hour intervals. Valid intervals are 30 & 60.
     interval = "30"
 
-    # Specify Coordinated Universal Time (UTC), 'true' will use UTC, 'false' will use the local time zone of the data.
-    # NOTE: In order to use the NSRDB data in SAM, you must specify UTC as 'false'. SAM requires the data to be in the
+    # Specify Coordinated Universal Time (UTC), "true" will use UTC, "false" will use the local time zone of the data.
+    # NOTE: In order to use the NSRDB data in SAM, you must specify UTC as "false". SAM requires the data to be in the
     # local time zone.
     utc = "false"
 
@@ -25,7 +48,7 @@ function get_nsrdb_raw_solar_data(lat,lon,year)
     credential_file = open("nrel-credentials.txt")
     nrel_credentials = readlines(credential_file)
     
-    # Your full name, use '+' instead of spaces.
+    # Your full name, use "+" instead of spaces.
     your_name = nrel_credentials[1]
 
     # Your email address
