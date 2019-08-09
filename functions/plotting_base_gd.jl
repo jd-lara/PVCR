@@ -65,7 +65,7 @@ function create_consumption_and_installation_arrays(utility_bill_df)
     return consumption_and_installation
 end
     
-# This function takes in consumption and generation arrays, and plots them
+# This function takes in consumption and installation arrays, and plots them
 function plot_consumption_and_installation(consumption_and_installation, tariff_name, company_name)
     plt.figure()
     # Plot out the actual PV system sizes that people have based on their energy bills
