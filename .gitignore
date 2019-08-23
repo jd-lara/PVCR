@@ -4,5 +4,4 @@
 deps/deps.jl
 .ipynb_checkpoints
 *.xlsx
-functions/nsrdb-python.py
 nrel-credentials.txt
