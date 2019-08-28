@@ -64,7 +64,7 @@ function create_consumption_and_installation_arrays(utility_bill_df)
     
     return consumption_and_installation
 end
-    
+
 # This function takes in consumption and installation arrays, and plots them
 function plot_consumption_and_installation(consumption_and_installation, tariff_name, company_name)
     plt.figure()
@@ -75,6 +75,40 @@ function plot_consumption_and_installation(consumption_and_installation, tariff_
     grid("on");
     title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_name))
     return the_plot
+end
+
+function plot_base_GD_vs_economically_rational(consumption_and_installation, tariff_name, company_name, consumption, model_predictions)
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    # Plot out the actual PV system sizes that people have based on their energy bills
+    ax1.scatter(consumption_and_installation[1], consumption_and_installation[2], marker=".", label = string("Actual PV System Installation for ", tariff_name, " Consumer"))
+    # Plot out the installation predicted by the economically rational model
+    ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_name, " Consumer"))
+    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+    ylabel("PV System Capacity [kW]")
+    xlabel("Consumer Monthly Energy use [kWh]")
+    grid("on");
+    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_name))
+end
+  
+function plot_single_tariff_category_per_company_with_model_prediction(company_data, tariff_category, company_name, consumption, model_predictions)
+    company_data_split_by_tariff_category = Array{DataFrame}(undef,3)
+
+    # Loop through all tariffs that we care about
+    for (tariff_num, tariff_category) in tariff_category_mappings
+        next_value = filter(row -> (!ismissing(row.CODIGO_TARIFA) && row.CODIGO_TARIFA == string(tariff_num)), company_data)
+        category_index = findfirst(t -> t == tariff_category, tariff_categories)
+        if !isassigned(company_data_split_by_tariff_category, category_index)
+            company_data_split_by_tariff_category[category_index] = next_value
+        else
+            append!(company_data_split_by_tariff_category[category_index], next_value)
+        end
+    end
+    
+    category_index = findfirst(t -> t == tariff_category, tariff_categories)
+    
+    plot_base_GD_vs_economically_rational(create_consumption_and_installation_arrays(
+                company_data_split_by_tariff_category[category_index]), tariff_categories[category_index], company_name, consumption, model_predictions)
 end
 
 function plot_all_tariffs_per_company(company_data, company_name)
