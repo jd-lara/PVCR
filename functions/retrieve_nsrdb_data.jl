@@ -1,5 +1,6 @@
 using Pandas
 using PyCall
+using PyPlot
 
 # Eventually move run_solar_data_through_sam_ssc here
 
@@ -33,7 +34,7 @@ function get_nsrdb_raw_solar_data(lat,lon,year)
     leap_year = "false"
 
     # Set time interval in minutes, i.e., "30" is half hour intervals. Valid intervals are 30 & 60.
-    interval = "30"
+    interval = "60"
 
     # Specify Coordinated Universal Time (UTC), "true" will use UTC, "false" will use the local time zone of the data.
     # NOTE: In order to use the NSRDB data in SAM, you must specify UTC as "false". SAM requires the data to be in the
@@ -80,5 +81,17 @@ function get_nsrdb_raw_solar_data(lat,lon,year)
     
     return nsrdb_data_frame;
 end
-
     
+function plot_pysam_output(df, i=5030, j=40)
+    plt.style.use("ggplot")
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax2 = ax.twinx()
+    ax.plot(df[["GHI", "DNI", "DHI", "Solar Zenith Angle"]][i:i+j]) # , handles={"90 Degree Zenith": "--","Solar Zenith Angle": "-o", "DNI": "-o", "DHI": "-o", "GHI": "-o"}
+    ax2.plot(df[["Generation"]][i:i+j], color="g") #, handles={"Generation": "y-o"}
+    ax.grid()
+    ax.set_ylabel("W/m2")
+    ax2.set_ylabel("kW")
+    ax.legend(df[["GHI", "DNI", "DHI", "Solar Zenith Angle"]][i:i+j], loc="upper left")
+    ax2.legend(df[["Generation"]][i:i+j], loc="upper right")
+end    
