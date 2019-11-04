@@ -7,7 +7,7 @@ site.addsitedir("/Applications/sam-sdk-2015-6-30-r3/languages/python/")
 
 from PySAM.PySSC import PySSC
 
-def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=0,elevation=1516):
+def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=-6,elevation=1516):
     df = pd.read_csv(request_url, skiprows=2)
     # Resource inputs for SAM model:
     ssc = PySSC()
@@ -38,7 +38,7 @@ def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=0,elevat
     # See https://sam.nrel.gov/sites/default/files/content/virtual_conf_july_2013/07-sam-virtual-conference-2013-woodcock.pdf
     ssc.data_set_number(dat, b'dc_ac_ratio', 1.1)
     # Set tilt of system in degrees
-    ssc.data_set_number(dat, b'tilt', 25)
+    ssc.data_set_number(dat, b'tilt', 8.5)
     # Set azimuth angle (in degrees) from north (0 degrees)
     ssc.data_set_number(dat, b'azimuth', 180)
     # Set the inverter efficency
@@ -56,7 +56,6 @@ def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=0,elevat
     
     mod = ssc.module_create(b'pvwattsv5');
     ssc.module_exec(mod, dat)
-#     return ssc.data_get_array(dat, b'gen')
     df["Generation"] = ssc.data_get_array(dat, b'gen')
     return df;
 

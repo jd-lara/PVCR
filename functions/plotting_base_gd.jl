@@ -22,7 +22,8 @@ tariff_category_mappings = Dict([
         ])
 
 # f = open("data/pv_output.txt");
-onekW_output_solar_year = get_nsrdb_sam_pv_output()
+# onekW_output_solar_year = map(row -> tryparse(Float64,row), readlines(f));
+onekW_output_solar_year = convert(Array{Float64,1},get_nsrdb_sam_pv_output())
 
 output_by_month = Array{Float64}(undef,12)
 # First entry for looping purposes only
