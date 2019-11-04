@@ -1,11 +1,14 @@
 # needed to import a local module for SAM simulation off personal machine (requires installation at that location)
 import site
+import pandas as pd
+from pprint import pprint
 # Use site.addsitedir() to set the path to the SAM SDK API. Set path to the python directory.
 site.addsitedir("/Applications/sam-sdk-2015-6-30-r3/languages/python/")
 
 from PySAM.PySSC import PySSC
 
-def call_ssc_with_dataframe(df,lat=9.817934,lon=-84.070552,timezone=1,elevation=0):
+def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=0,elevation=1516):
+    df = pd.read_csv(request_url, skiprows=2)
     # Resource inputs for SAM model:
     ssc = PySSC()
     wfd = ssc.data_create()
@@ -53,4 +56,8 @@ def call_ssc_with_dataframe(df,lat=9.817934,lon=-84.070552,timezone=1,elevation=
     
     mod = ssc.module_create(b'pvwattsv5');
     ssc.module_exec(mod, dat)
+#     return ssc.data_get_array(dat, b'gen')
     df["Generation"] = ssc.data_get_array(dat, b'gen')
+    return df;
+
+# pprint(call_nsrdb_and_ssc("http://developer.nrel.gov/api/solar/nsrdb_psm3_download.csv?wkt=POINT(-84.070552%209.817934)&names=2010&leap_day=false&interval=60&utc=false&full_name=Arnav+Gautam&email=arnavgautam@berkeley.edu&affiliation=no+affiliation&mailing_list=false&reason=data+analysis&api_key=VIX9bQUTPCmwzcNyp1DuiyiOy8nlnilwloUZYBbe&attributes=ghi,dhi,dni,wind_speed,air_temperature,solar_zenith_angle"))

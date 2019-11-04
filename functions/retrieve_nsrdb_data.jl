@@ -1,6 +1,6 @@
-using Pandas
 using PyCall
 using PyPlot
+using DelimitedFiles
 
 # Eventually move run_solar_data_through_sam_ssc here
 
@@ -24,7 +24,7 @@ function predict_solar_output_at_location(lat=9.817934,lon=-84.070552)
     println(result.ac_annual)
 end
 
-function get_nsrdb_raw_solar_data(lat,lon,year)
+function get_nsrdb_request_url(lat,lon,year)
     # Declare all variables as strings. Spaces must be replaced with "+", i.e., change "John Smith" to "John+Smith".
 
     # Set the attributes to extract (e.g., dhi, ghi, etc.), separated by commas.
@@ -71,27 +71,52 @@ function get_nsrdb_raw_solar_data(lat,lon,year)
     
     # Declare url string
     url = "http://developer.nrel.gov/api/solar/nsrdb_psm3_download.csv?wkt=POINT($(lon)%20$(lat))&names=$(year)&leap_day=$(leap_year)&interval=$(interval)&utc=$(utc)&full_name=$(your_name)&email=$(your_email)&affiliation=$(your_affiliation)&mailing_list=$(mailing_list)&reason=$(reason_for_use)&api_key=$(api_key)&attributes=$(attributes)";
+    
+    return url;
 
     # The first two rows are not data values
     # The column names and the "first row" are metadata identifiers and values, respectively
     # The "second row" is what we'd consider the "column names" for the actual data, which is row 3 and beyond
-
     # read the actual data, "row" 3 and below
-    nsrdb_data_frame = read_csv(url, skiprows=2);
-    
-    return nsrdb_data_frame;
+    # nsrdb_data_frame = read_csv(url, skiprows=2);
+    # return nsrdb_data_frame;
+end
+
+function get_nsrdb_sam_df()
+    request_url = get_nsrdb_request_url(9.817934, -84.070552, 2010);
+    py"""
+    import sys
+    sys.path.insert(0, ".")
+    sys.path.insert(0, "./functions")
+    """
+    call_nsrdb_and_ssc = pyimport("nsrdb_python")["call_nsrdb_and_ssc"];
+    nsrdb_sam_df = call_nsrdb_and_ssc(request_url);
+    return nsrdb_sam_df;
+end
+
+function get_nsrdb_sam_pv_output(;pipeline=true)
+    if pipeline == true
+        nsrdb_sam_df = get_nsrdb_sam_df()
+        pv_output = values(nsrdb_sam_df["Generation"])
+    else
+        pv_output=readdlm("data/pv_output.txt", '\t', Float64, '\n')
+    end
+    return pv_output
 end
     
 function plot_pysam_output(df, i=5030, j=40)
-    plt.style.use("ggplot")
+    plt.style.use("seaborn")
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax2 = ax.twinx()
-    ax.plot(df[["GHI", "DNI", "DHI", "Solar Zenith Angle"]][i:i+j]) # , handles={"90 Degree Zenith": "--","Solar Zenith Angle": "-o", "DNI": "-o", "DHI": "-o", "GHI": "-o"}
-    ax2.plot(df[["Generation"]][i:i+j], color="g") #, handles={"Generation": "y-o"}
+    ax.plot(df[[:GHI]][i:i+j,:][:1])
+    ax.plot(df[[:DNI]][i:i+j,:][:1])
+    ax.plot(df[[:DHI]][i:i+j,:][:1])
+    ax.plot(df[[Symbol("Solar Zenith Angle")]][i:i+j,:][:1])
+    ax2.plot(df[[:Generation]][i:i+j,:][:1], color="y")
     ax.grid()
     ax.set_ylabel("W/m2")
     ax2.set_ylabel("kW")
-    ax.legend(df[["GHI", "DNI", "DHI", "Solar Zenith Angle"]][i:i+j], loc="upper left")
-    ax2.legend(df[["Generation"]][i:i+j], loc="upper right")
+    ax.legend([:GHI, :DNI, :DHI, Symbol("Solar Zenith Angle")], loc="upper left")
+    ax2.legend([:Generation], loc="upper right")
 end    
