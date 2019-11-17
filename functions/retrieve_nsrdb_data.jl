@@ -2,26 +2,34 @@ using PyCall
 using PyPlot
 using DelimitedFiles
 
-# Eventually move run_solar_data_through_sam_ssc here
+function monte_carlo_solar_output()
+    for i in 0:100
+        # Sample locations in Costa Rica with probabilities dictated by data on population density
+        
+    end
+    # Average all of them, to return a normalized data set for a hypothetical "solar year"?
+end
 
-# This function is completely unnecessary right now, I'm just keeping it here as reference in case it's useful in the future
-@pyimport pypvwatts;
-function predict_solar_output_at_location(lat=9.817934,lon=-84.070552)
-    PVWatts = pypvwatts.PVWatts
-    # Get api key
-    credential_file = open("nrel-credentials.txt")
-    nrel_credentials = readlines(credential_file)
-        # You must have an NSRDB api key
-    api_key = nrel_credentials[4]
-    close(credential_file)
+function get_nsrdb_sam_pv_output(;lat=9.817934, lon=-84.070552, tz=-6, year=2010, pipeline=true)
+    if pipeline == true
+        nsrdb_sam_df = get_nsrdb_sam_df(lat, lon, tz, year)
+        pv_output = values(nsrdb_sam_df["Generation"])
+    else
+        pv_output=readdlm("data/pv_output.txt", '\t', Float64, '\n')
+    end
+    return pv_output
+end
     
-    
-    PVWatts.api_key = api_key
-    result = PVWatts.request(
-        system_capacity=4, module_type=1, array_type=1,
-        azimuth=190, tilt=30, dataset="tmy2",
-        losses=13, lat=lat, lon=lon)
-    println(result.ac_annual)
+function get_nsrdb_sam_df(lat, lon, tz, year)
+    request_url = get_nsrdb_request_url(lat, lon, year);
+    py"""
+    import sys
+    sys.path.insert(0, ".")
+    sys.path.insert(0, "./functions")
+    """
+    call_nsrdb_and_ssc = pyimport("nsrdb_python")["call_nsrdb_and_ssc"];
+    nsrdb_sam_df = call_nsrdb_and_ssc(request_url, lat, lon, tz);
+    return nsrdb_sam_df;
 end
 
 function get_nsrdb_request_url(lat,lon,year)
@@ -82,28 +90,6 @@ function get_nsrdb_request_url(lat,lon,year)
     # return nsrdb_data_frame;
 end
 
-function get_nsrdb_sam_df()
-    request_url = get_nsrdb_request_url(9.817934, -84.070552, 2010);
-    py"""
-    import sys
-    sys.path.insert(0, ".")
-    sys.path.insert(0, "./functions")
-    """
-    call_nsrdb_and_ssc = pyimport("nsrdb_python")["call_nsrdb_and_ssc"];
-    nsrdb_sam_df = call_nsrdb_and_ssc(request_url);
-    return nsrdb_sam_df;
-end
-
-function get_nsrdb_sam_pv_output(;pipeline=true)
-    if pipeline == true
-        nsrdb_sam_df = get_nsrdb_sam_df()
-        pv_output = values(nsrdb_sam_df["Generation"])
-    else
-        pv_output=readdlm("data/pv_output.txt", '\t', Float64, '\n')
-    end
-    return pv_output
-end
-    
 function plot_pysam_output(df, i=5030, j=40)
     plt.style.use("seaborn")
     fig = plt.figure()
@@ -119,4 +105,26 @@ function plot_pysam_output(df, i=5030, j=40)
     ax2.set_ylabel("kW")
     ax.legend([:GHI, :DNI, :DHI, Symbol("Solar Zenith Angle")], loc="upper left")
     ax2.legend([:Generation], loc="upper right")
-end    
+end
+
+####################
+
+# This function is completely unnecessary right now, I'm just keeping it here as reference in case it's useful in the future
+@pyimport pypvwatts;
+function predict_solar_output_at_location(lat=9.817934,lon=-84.070552)
+    PVWatts = pypvwatts.PVWatts
+    # Get api key
+    credential_file = open("nrel-credentials.txt")
+    nrel_credentials = readlines(credential_file)
+        # You must have an NSRDB api key
+    api_key = nrel_credentials[4]
+    close(credential_file)
+    
+    
+    PVWatts.api_key = api_key
+    result = PVWatts.request(
+        system_capacity=4, module_type=1, array_type=1,
+        azimuth=190, tilt=30, dataset="tmy2",
+        losses=13, lat=lat, lon=lon)
+    println(result.ac_annual)
+end
