@@ -6,7 +6,7 @@ site.addsitedir("/Applications/sam-sdk-2015-6-30-r3/languages/python/")
 
 from PySAM.PySSC import PySSC
 
-def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=-6,elevation=1516):
+def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=-6,elevation=746):
     # Get raw solar radiation data from NSRDB
     df = pd.read_csv(request_url, skiprows=2)
     

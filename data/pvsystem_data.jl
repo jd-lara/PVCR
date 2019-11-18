@@ -1,4 +1,4 @@
-pv_output = get_nsrdb_sam_pv_output()
+pv_output = monte_carlo_solar_output(num_samples=2)
 
 PVRes = PVSystem(1.8,
                 [171,155,132,115,104,92,96,111,115,125,114,153],

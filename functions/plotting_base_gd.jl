@@ -23,14 +23,17 @@ tariff_category_mappings = Dict([
 
 # f = open("data/pv_output.txt");
 # onekW_output_solar_year = map(row -> tryparse(Float64,row), readlines(f));
-onekW_output_solar_year = convert(Array{Float64,1},get_nsrdb_sam_pv_output())
+# onekW_output_solar_year (now onekW_output_solar_year) = convert(Array{Float64,1},get_nsrdb_sam_pv_output())
+if !@isdefined pv_output
+    pv_output = monte_carlo_solar_output(num_samples=2)
+end
 
 output_by_month = Array{Float64}(undef,12)
 # First entry for looping purposes only
 days_per_month = [0,31,28,31,30,31,30,31,31,30,31,30,31]
 
 for i=1:12
-    output_by_month[i] = sum(onekW_output_solar_year[sum(days_per_month[1:i])*24+1:sum(days_per_month[1:i+1])*24])
+    output_by_month[i] = sum(pv_output[sum(days_per_month[1:i])*24+1:sum(days_per_month[1:i+1])*24])
 end
 
 function generation_to_installation(data_frame)

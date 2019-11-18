@@ -1,13 +1,76 @@
 using PyCall
 using PyPlot
 using DelimitedFiles
+using ArchGDAL
+using StatsBase
 
-function monte_carlo_solar_output()
-    for i in 0:100
-        # Sample locations in Costa Rica with probabilities dictated by data on population density
-        
+function monte_carlo_solar_output(;num_samples=100)
+    pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
+    monte_carlo_coords = Array{Tuple{Float64, Float64}}(undef, 0)
+
+    ArchGDAL.registerdrivers() do
+        ArchGDAL.read(pop_density_filename) do dataset
+
+            # Get the band of data corresponding to population density per ~5km square of the Earth's surface
+            band = ArchGDAL.getband(dataset, 1)
+
+            # Limit to a bounding box surrounding Costa Rica (excluding Cocos Island National Park)
+            min_lat = 8.040682
+            max_lat = 11.2195684
+            min_lon = -85.956896
+            max_lon = -82.5060208
+            band_width = ArchGDAL.width(band)
+            band_height = ArchGDAL.height(band)   
+            max_lat_ind = ceil((90 - min_lat) * band_height / 180)
+            min_lat_ind = min(ceil((90 - max_lat) * band_height / 180), max_lat_ind - 1)
+            min_lon_ind = ceil((min_lon + 180) * band_width / 360)
+            max_lon_ind = max(ceil((max_lon + 180) * band_width / 360), min_lon_ind + 1)
+            rows = UnitRange{Int}(min_lat_ind, max_lat_ind)
+            cols = UnitRange{Int}(min_lon_ind, max_lon_ind)
+            bounding_box_contents = ArchGDAL.read(band, rows, cols)
+            bounding_box_contents = [i > 0 ? i : 0 for i in bounding_box_contents] # Have to clean up negative values
+
+            # Convert indices into a set of values for an Empirical CDF
+            indices = collect(Iterators.flatten(1:length(bounding_box_contents)))
+
+            # Convert population density into a set of weights for an Empirical CDF
+            population_density = collect(Iterators.flatten(bounding_box_contents))
+            population_density /= sum(population_density)
+            weights = FrequencyWeights(population_density)
+
+            # Run the weighted sampling, to obtain the coordinates we will sample NSRDB from
+            samples = sample(indices, weights, num_samples, replace=false)
+
+            # For converting indices back to lat/long coordinates
+            box_height, box_width = size(bounding_box_contents)
+            function box_to_coords(index)
+                x = div(index, box_width)
+                y = index % box_width
+                lat = min_lat + (max_lat - min_lat)/box_height*x
+                lon = min_lon + (max_lon - min_lon)/box_width*y
+                return (lat,lon)
+            end
+
+            for sample in samples
+                push!(monte_carlo_coords, box_to_coords(sample));
+            end
+        end
     end
+    
+    # Obtain sample PV output for each location
+    cumulative_pv_output = Array{Float64,1}(undef,0)
+    for (lat, lon) in monte_carlo_coords
+        pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
+        if length(cumulative_pv_output) == 0
+            append!(cumulative_pv_output, pv_output)
+        else
+            cumulative_pv_output += pv_output
+        end
+    end
+    
     # Average all of them, to return a normalized data set for a hypothetical "solar year"?
+    return cumulative_pv_output ./ num_samples
+    
 end
 
 function get_nsrdb_sam_pv_output(;lat=9.817934, lon=-84.070552, tz=-6, year=2010, pipeline=true)
