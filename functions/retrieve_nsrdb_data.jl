@@ -36,7 +36,7 @@ function monte_carlo_solar_output(;num_samples=100)
             # Convert population density into a set of weights for an Empirical CDF
             population_density = collect(Iterators.flatten(bounding_box_contents))
             population_density /= sum(population_density)
-            weights = FrequencyWeights(population_density)
+            weights = Weights(population_density)
 
             # Run the weighted sampling, to obtain the coordinates we will sample NSRDB from
             samples = sample(indices, weights, num_samples, replace=false)
@@ -60,6 +60,7 @@ function monte_carlo_solar_output(;num_samples=100)
     # Obtain sample PV output for each location
     cumulative_pv_output = Array{Float64,1}(undef,0)
     for (lat, lon) in monte_carlo_coords
+        sleep(5)
         pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
         if length(cumulative_pv_output) == 0
             append!(cumulative_pv_output, pv_output)

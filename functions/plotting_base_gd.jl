@@ -21,9 +21,6 @@ tariff_category_mappings = Dict([
         (12, tariff_categories[3])
         ])
 
-# f = open("data/pv_output.txt");
-# onekW_output_solar_year = map(row -> tryparse(Float64,row), readlines(f));
-# onekW_output_solar_year (now onekW_output_solar_year) = convert(Array{Float64,1},get_nsrdb_sam_pv_output())
 if !@isdefined pv_output
     pv_output = monte_carlo_solar_output(num_samples=2)
 end
