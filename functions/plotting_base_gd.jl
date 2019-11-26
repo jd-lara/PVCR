@@ -139,7 +139,7 @@ function plot_all_tariffs_per_company(company_data, company_name)
     end
 end
 
-function plot_segmented_tariff_category_with_regression(company_data, tariff_category, company_name, consumption, model_predictions, regression_limit=0)
+function plot_segmented_tariff_category_with_regression(company_data, tariff_category, company_name, consumption, model_predictions, regression_limit=0, individual_regressions=false)
     colors = ["g", "c", "m", "y", "k"]
     
     individual_tariffs = Dict{Integer,DataFrame}()
@@ -155,8 +155,11 @@ function plot_segmented_tariff_category_with_regression(company_data, tariff_cat
     
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
+    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
     
     all_tariff_data = Array{DataFrame}(undef,1)
+    
+    individual_consumption_and_installations = []
     
     for (tariff_num, tariff_df) in individual_tariffs
         if !isassigned(all_tariff_data, 1)
@@ -165,8 +168,12 @@ function plot_segmented_tariff_category_with_regression(company_data, tariff_cat
             append!(all_tariff_data[1], tariff_df)
         end
         t_consumption, t_installation = create_consumption_and_installation_arrays(tariff_df)
+        plot_color = pop!(colors)
         # Plot out the actual PV system sizes that people have based on their energy bills
-        ax1.scatter(t_consumption, t_installation, c=pop!(colors), marker=".", alpha=0.5, label = string("Actual PV System Installation for a ", tariff_category, " Number ", tariff_num, " Consumer"))
+        ax1.scatter(t_consumption, t_installation, c=plot_color, marker=".", alpha=0.5, label = string("Actual PV System Installation for a ", tariff_category, " Number ", tariff_num, " Consumer"))
+        if individual_regressions == true
+            push!(individual_consumption_and_installations, (t_consumption, t_installation, tariff_num, plot_color))
+        end
     end
     
     # Get least-squares regression of the data
@@ -215,10 +222,37 @@ function plot_segmented_tariff_category_with_regression(company_data, tariff_cat
     model_data_b, model_data_m = coef(lm(@formula(PREDICTIONS ~ CONSUMPTION), model_df))
     y_vals = model_data_m * x_vals .+ model_data_b
     ax1.plot(x_vals, y_vals, "--", c="c", label = string("Least-squares regression for model prediction"))
-    
     legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
     ylabel("PV System Capacity [kW]")
     xlabel("Consumer Monthly Energy use [kWh]")
     grid("on");
-    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
+    
+    if individual_regressions == true
+        num_figures = length(individual_consumption_and_installations)
+        fig = plt.figure(figsize=(num_figures, 5*num_figures))
+        colors = ["g", "c", "m", "y", "k"]
+        for i in 1:length(individual_consumption_and_installations)
+            new_axis = fig.add_subplot(num_figures, 1, i)
+            for j in 1:length(individual_consumption_and_installations)
+                t_consumption, t_installation, tariff_num, plot_color = individual_consumption_and_installations[j]
+                new_axis.scatter(t_consumption, t_installation, c=plot_color, marker=".", alpha=0.5)
+            end
+            t_consumption, t_installation, tariff_num, plot_color = individual_consumption_and_installations[i]
+            combined = DataFrame()
+            combined[:CONSUMPTION] = t_consumption
+            combined[:INSTALLATION] = t_installation
+            # Run regression on the specific sub-tariff, and plot.
+            data_b, data_m = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined))
+            x_vals = new_axis.get_xlim()
+            x_vals = x_vals[1]:x_vals[2]-x_vals[1]/100:x_vals[2]
+            y_vals = data_m * x_vals .+ data_b
+            new_axis.plot(x_vals, y_vals, "--", c=plot_color, label = string("Least-squares regression for actual installation for tariff number ", tariff_num))
+            legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+            ylabel("PV System Capacity [kW]")
+            xlabel("Consumer Monthly Energy use [kWh]")
+            grid("on");
+        end
+    end
+    
+    
 end
