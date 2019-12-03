@@ -3,7 +3,7 @@ using PyPlot
 using DelimitedFiles
 using StatsBase
 using ArchGDAL
-AG = ArchGDAL
+const AG = ArchGDAL
 
 function monte_carlo_solar_output(;num_samples=100)
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
@@ -20,77 +20,89 @@ function monte_carlo_solar_output(;num_samples=100)
             AG.read(area_protegidas_gis_filename) do area_protegidas_gis_dataset
                 area_protegidas_gis = AG.getlayer(area_protegidas_gis_dataset, 0)
                 
-                # Get data corresponding to population density per ~5km square of the Earth's surface
-                AG.read(pop_density_filename) do pop_dataset
-                    pop_band = AG.getband(pop_dataset, 1)
+                # The above 2 GIS data files are in a format which does not line up with latitude and longitude.
+                # We will run a transform to project it into lat-long
+                AG.importPROJ4("proj +proj=longlat") do target
+        
+                
+                    # Get data corresponding to population density per ~5km square of the Earth's surface
+                    AG.read(pop_density_filename) do pop_dataset
+                        pop_band = AG.getband(pop_dataset, 1)
 
-                    # Limit to a bounding box surrounding Costa Rica (excluding Cocos Island National Park)
-                    min_lat = 8.040682
-                    max_lat = 11.2195684
-                    min_lon = -85.956896
-                    max_lon = -82.5060208
-                    pop_band_width = AG.width(pop_band)
-                    pop_band_height = AG.height(pop_band)   
-                    max_lat_ind = ceil((90 - min_lat) * pop_band_height / 180)
-                    min_lat_ind = min(ceil((90 - max_lat) * pop_band_height / 180), max_lat_ind - 1)
-                    min_lon_ind = ceil((min_lon + 180) * pop_band_width / 360)
-                    max_lon_ind = max(ceil((max_lon + 180) * pop_band_width / 360), min_lon_ind + 1)
-                    rows = UnitRange{Int}(min_lat_ind, max_lat_ind)
-                    cols = UnitRange{Int}(min_lon_ind, max_lon_ind)
-                    bounding_box_contents = AG.read(pop_band, rows, cols)
-                    bounding_box_contents = [i > 0 ? i : 0 for i in bounding_box_contents] # Have to clean up negative values
-                    
-                    # For converting indices back to lat/long coordinates
-                    box_height, box_width = size(bounding_box_contents)
-                    function box_to_coords(index)
-                        x = div(index, box_width)
-                        y = index % box_width
-                        lat = min_lat + (max_lat - min_lat)/box_height*x
-                        lon = min_lon + (max_lon - min_lon)/box_width*y
-                        return (lat,lon)
-                    end
+                        # Limit to a bounding box surrounding Costa Rica (excluding Cocos Island National Park)
+                        min_lat = 8.040682
+                        max_lat = 11.2195684
+                        min_lon = -85.956896
+                        max_lon = -82.5060208
+                        pop_band_width = AG.width(pop_band)
+                        pop_band_height = AG.height(pop_band)   
+                        max_lat_ind = ceil((90 - min_lat) * pop_band_height / 180)
+                        min_lat_ind = min(ceil((90 - max_lat) * pop_band_height / 180), max_lat_ind - 1)
+                        min_lon_ind = ceil((min_lon + 180) * pop_band_width / 360)
+                        max_lon_ind = max(ceil((max_lon + 180) * pop_band_width / 360), min_lon_ind + 1)
+                        rows = UnitRange{Int}(min_lat_ind, max_lat_ind)
+                        cols = UnitRange{Int}(min_lon_ind, max_lon_ind)
+                        bounding_box_contents = AG.read(pop_band, rows, cols)
+                        bounding_box_contents = [i > 0 ? i : 0 for i in bounding_box_contents] # Have to clean up negative values
 
-                    # Convert indices into a set of values for an Empirical CDF
-                    indices = collect(Iterators.flatten(1:length(bounding_box_contents)))
+                        # For converting indices back to lat/long coordinates
+                        box_height, box_width = size(bounding_box_contents)
+                        function box_to_coords(index)
+                            x = div(index, box_width)
+                            y = index % box_width
+                            lat = min_lat + (max_lat - min_lat)/box_height*x
+                            lon = min_lon + (max_lon - min_lon)/box_width*y
+                            return (lat,lon)
+                        end
 
-                    # Convert population density into a set of weights for an Empirical CDF
-                    population_density = collect(Iterators.flatten(bounding_box_contents))
-                    population_density /= sum(population_density)
-                    weights = FrequencyWeights(population_density)
-                    
-                    # Run the weighted sampling, to obtain the coordinates we will sample NSRDB from
-                    coords = []
-                    while length(coords) < num_samples
-                        possible_sample = sample(indices, weights)
-                        possible_coords = box_to_coords(possible_sample)
-                        
-                        # Determine whether these coordinates have been already added, or are part of excluded parts of CR
-                        if !in(possible_coords, coords)
-                            can_add = true
-                            ag_coords = AG.createpoint(possible_coords)
-                            num_features = AG.nfeature(area_protegidas_gis)
-                            for i in 1:(num_features)
-                                ArchGDAL.getfeature(area_protegidas_gis, i - 1) do feature
-                                    geom = AG.getgeomfield(feature, 0)
-                                    if AG.contains(ag_coords, geom)
-                                        can_add = false # Not using this (lat,lon) point because it is in an uninhabited location
+                        # Convert indices into a set of values for an Empirical CDF
+                        indices = collect(Iterators.flatten(1:length(bounding_box_contents)))
+
+                        # Convert population density into a set of weights for an Empirical CDF
+                        population_density = collect(Iterators.flatten(bounding_box_contents))
+                        population_density /= sum(population_density)
+                        weights = FrequencyWeights(population_density)
+
+                        # Run the weighted sampling, to obtain the coordinates we will sample NSRDB from
+                        coords = []
+                        while length(coords) < num_samples
+                            possible_sample = sample(indices, weights)
+                            possible_coords = box_to_coords(possible_sample)
+
+                            # Determine whether these coordinates have been already added, or are part of excluded parts of CR
+                            if !in(possible_coords, coords)
+                                can_add = true
+                                ag_coords = AG.createpoint(possible_coords[2],possible_coords[1])
+                                num_features = AG.nfeature(area_protegidas_gis)
+                                for i in 1:(num_features)
+                                    ArchGDAL.getfeature(area_protegidas_gis, i - 1) do feature
+                                        geom = AG.getgeomfield(feature, 0)
+                                        source = AG.getspatialref(geom)
+                                        AG.createcoordtrans(source, target) do transform
+                                            AG.transform!(geom, transform)
+                                            if AG.contains(geom, ag_coords)
+                                                can_add = false # Not using this (lat,lon) point because it is in an uninhabited location
+                                            end
+                                        end
                                     end
                                 end
-                            end
-                            
-                            if can_add
-                                push!(coords, possible_coords)
+
+                                if can_add
+                                    push!(coords, possible_coords)
+                                end
                             end
                         end
-                    end
 
-                    for coord in coords
-                        push!(monte_carlo_coords, coord);
+                        for coord in coords
+                            push!(monte_carlo_coords, coord);
+                        end
                     end
                 end
             end
         end
     end
+    
+    return
         
     # Obtain sample PV output for each location
     cumulative_pv_output = Array{Float64,1}(undef,0)
