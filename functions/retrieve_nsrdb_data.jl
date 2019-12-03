@@ -81,7 +81,7 @@ function monte_carlo_solar_output(;num_samples=100)
                                         AG.createcoordtrans(source, target) do transform
                                             AG.transform!(geom, transform)
                                             if AG.contains(geom, ag_coords)
-                                                can_add = false # Not using this (lat,lon) point because it is in an uninhabited location
+                                                can_add = false # Not using this point because it is in an uninhabited location
                                             end
                                         end
                                     end
@@ -101,8 +101,6 @@ function monte_carlo_solar_output(;num_samples=100)
             end
         end
     end
-    
-    return
         
     # Obtain sample PV output for each location
     cumulative_pv_output = Array{Float64,1}(undef,0)
