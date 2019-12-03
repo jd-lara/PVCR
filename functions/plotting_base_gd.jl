@@ -12,6 +12,7 @@ using GLM
 
 tariff_categories = ["Residential", "Commercial Industrial", "Medium Voltage"]
 
+# TODO Figure out what these individual tariff sub-categories are called/what they represent
 tariff_category_mappings = Dict([
         (1, tariff_categories[1]),
         (4, tariff_categories[2]),
@@ -31,19 +32,7 @@ days_per_month = [0,31,28,31,30,31,30,31,31,30,31,30,31]
 
 for i=1:12
     output_by_month[i] = sum(pv_output[sum(days_per_month[1:i])*24+1:sum(days_per_month[1:i+1])*24])
-end
-
-function generation_to_installation(data_frame)
-    installation_array = Array{Float64}(undef,0)
-    for r in eachrow(data_frame)
-        month = r.MES
-        generation = r.ENERGIA_GENERADA
-        installation = generation / output_by_month[month]
-        push!(installation_array, installation)
-    end
-    return installation_array
-end
-        
+end     
 
 # This function cleans up the data for a particular utility+tariff
 function create_consumption_and_installation_arrays(utility_bill_df)    
@@ -138,6 +127,97 @@ function plot_all_tariffs_per_company(company_data, company_name)
                 company_data_split_by_tariff_category[i]), tariff_categories[i], company_name)
     end
 end
+
+function plot_tariff_category_with_two_regressions(company_data, tariff_category, company_name, consumption, model_predictions, inflection_point=1500)
+    
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+
+    
+    # Collect the tariff-relevant data
+    tariff_data = Array{DataFrame}(undef,1)
+    for (tariff_num, tariff_cat) in tariff_category_mappings
+        if tariff_cat != tariff_category
+            continue
+        end
+        tariff_df = filter(row -> (!ismissing(row.CODIGO_TARIFA) && row.CODIGO_TARIFA == string(tariff_num)), company_data)
+        if !isassigned(tariff_data, 1)
+            tariff_data[1] = tariff_df
+        else
+            append!(tariff_data[1], tariff_df)
+        end
+    end
+    
+    # Get least-squares regression of the data
+    t_consumption, t_installation = create_consumption_and_installation_arrays(tariff_data[1])
+    combined = DataFrame()
+    combined[:CONSUMPTION] = t_consumption
+    combined[:INSTALLATION] = t_installation
+
+    function map_to_float(str)
+        try
+            convert(Float64, str) 
+        catch 
+            return(NA) 
+        end
+    end
+    
+    combined[:CONSUMPTION] = map(map_to_float, combined[:CONSUMPTION])
+    combined[:INSTALLATION] = map(map_to_float, combined[:INSTALLATION])
+
+    combined_1 = filter(row -> (row.CONSUMPTION <= inflection_point), combined)
+    data_b_1, data_m_1 = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined_1))
+    t_consumption_1 = combined_1[:CONSUMPTION]
+    t_installation_1 = combined_1[:INSTALLATION]
+    ax1.scatter(t_consumption_1, t_installation_1, c="g", marker=".", alpha=0.2, label = string("Actual PV System Installation for a ", tariff_category, " Consumer using less than ", inflection_point, " kWh per month"))    
+    
+    combined_2 = filter(row -> (row.CONSUMPTION > inflection_point), combined)
+    data_b_2, data_m_2 = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined_2))
+    t_consumption_2 = combined_2[:CONSUMPTION]
+    t_installation_2 = combined_2[:INSTALLATION]
+    ax1.scatter(t_consumption_2, t_installation_2, c="m", marker=".", alpha=0.2, label = string("Actual PV System Installation for a ", tariff_category, " Consumer using more than ", inflection_point, " kWh per month"))
+    
+    x_vals = ax1.get_xlim()
+    x_vals_1 = x_vals[1]:(inflection_point-x_vals[1])/100:inflection_point
+    x_vals_2 = inflection_point:(x_vals[2]-inflection_point)/100:x_vals[2]
+    y_vals_1 = data_m_1 * x_vals_1 .+ data_b_1
+    y_vals_2 = data_m_2 * x_vals_2 .+ data_b_2
+    ax1.plot(x_vals_1, y_vals_1, "--", c="g", label = string("Least-squares regression for actual installation of consumers using less than ", inflection_point, " kWh per month"))
+    ax1.plot(x_vals_2, y_vals_2, "--", c="m", label = string("Least-squares regression for actual installation of consumers using more than ", inflection_point, " kWh per month"))
+    
+    # Run a regression on the model data
+    ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_category, " Consumer"))
+#     model_df = DataFrame()
+#     model_df[:CONSUMPTION] = consumption
+#     model_df[:PREDICTIONS] = model_predictions
+#     model_df[:CONSUMPTION] = map(map_to_float, model_df[:CONSUMPTION])
+#     model_df[:PREDICTIONS] = map(map_to_float, model_df[:PREDICTIONS])
+
+#     model_df_1 = filter(row -> (row.CONSUMPTION <= inflection_point), model_df)
+#     model_b_1, model_m_1 = coef(lm(@formula(PREDICTIONS ~ CONSUMPTION), model_df_1))
+#     y_vals_model_1 = model_m_1 * x_vals_1 .+ model_b_1
+#     ax1.plot(x_vals_1, y_vals_model_1, "--", c="r", label = string("Least-squares regression for model prediction below inflection point"))
+
+    
+#     model_df_2 = filter(row -> (row.CONSUMPTION > inflection_point), model_df)
+#     model_b_2, model_m_2 = coef(lm(@formula(PREDICTIONS ~ CONSUMPTION), model_df_2))
+#     y_vals_model_2 = model_m_2 * x_vals_2 .+ model_b_2
+#     ax1.plot(x_vals_2, y_vals_model_2, "--", c="r", label = string("Least-squares regression for model prediction above inflection point"))
+
+    
+    
+
+
+
+    
+    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
+    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+#     colors = ["g", "c", "m", "y", "k"]
+    
+    
+end
+
+##################################
 
 function plot_segmented_tariff_category_with_regression(company_data, tariff_category, company_name, consumption, model_predictions, regression_limit=0, individual_regressions=false)
     colors = ["g", "c", "m", "y", "k"]
