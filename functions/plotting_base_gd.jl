@@ -23,7 +23,11 @@ tariff_category_mappings = Dict([
         ])
 
 if !@isdefined pv_output
-    pv_output = monte_carlo_solar_output(num_samples=2)
+    if @isdefined(cnfl)
+        pv_output = monte_carlo_solar_output(num_samples=2, cnfl=cnfl)
+    else
+        pv_output = monte_carlo_solar_output(num_samples=2)
+    end
 end
 
 output_by_month = Array{Float64}(undef,12)

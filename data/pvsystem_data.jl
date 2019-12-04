@@ -1,52 +1,31 @@
-cnfl_pv_output = monte_carlo_solar_output(num_samples=2, cnfl=[true])
-ice_pv_output = monte_carlo_solar_output(num_samples=2, cnfl=[false])
+if @isdefined(cnfl)
+    pv_output = monte_carlo_solar_output(num_samples=2, cnfl=cnfl)
+else
+    pv_output = monte_carlo_solar_output(num_samples=2)
+end
 
-PVRes_CNFL = PVSystem(1.8,
+PVRes = PVSystem(1.8,
                 [171,155,132,115,104,92,96,111,115,125,114,153],
                 0.08,
                 [(0:3.0, 2000), (3.0:5.0, 1800), (5.0:10.0, 1700), (10.0:100.0, 1500), (100.0:1000.0, 1000)],
                 15000,
-                cnfl_pv_output
+                pv_output
 )
 
-PVComInd_CNFL = PVSystem(10.0,
+PVComInd = PVSystem(10.0,
                 [171,155,132,115,104,92,96,111,115,125,114,153],
                 0.08,
                 [(0:3.0, 2000), (3:5.0, 1800), (5:10.0, 1700), (10.0:100.0, 1500), (100.0:1000.0, 1000)],
                 15000,
-                cnfl_pv_output
+                pv_output
 )
 
-PVTMT_CNFL = PVSystem(30.0,
+PVTMT = PVSystem(30.0,
                 [171,155,132,115,104,92,96,111,115,125,114,153],
                 0.08,
                 [(0:3.0, 2000), (3:5.0, 1800), (5:10.0, 1700), (10.0:100.0, 1500), (100.0:1000.0, 1000)],
                 15000,
-                cnfl_pv_output
-)
-
-PVRes_ICE = PVSystem(1.8,
-                [171,155,132,115,104,92,96,111,115,125,114,153],
-                0.08,
-                [(0:3.0, 2000), (3.0:5.0, 1800), (5.0:10.0, 1700), (10.0:100.0, 1500), (100.0:1000.0, 1000)],
-                15000,
-                ice_pv_output
-)
-
-PVComInd_ICE = PVSystem(10.0,
-                [171,155,132,115,104,92,96,111,115,125,114,153],
-                0.08,
-                [(0:3.0, 2000), (3:5.0, 1800), (5:10.0, 1700), (10.0:100.0, 1500), (100.0:1000.0, 1000)],
-                15000,
-                ice_pv_output
-)
-
-PVTMT_ICE = PVSystem(30.0,
-                [171,155,132,115,104,92,96,111,115,125,114,153],
-                0.08,
-                [(0:3.0, 2000), (3:5.0, 1800), (5:10.0, 1700), (10.0:100.0, 1500), (100.0:1000.0, 1000)],
-                15000,
-                ice_pv_output
+                pv_output
 )
 
 #Financials for the system

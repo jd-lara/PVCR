@@ -93,7 +93,7 @@ function monte_carlo_solar_output(;num_samples=100, cnfl=[])
                                             end
                                         end
                                     end
-                                    if !can_add:
+                                    if !can_add
                                         continue
                                     end
                                 end
@@ -130,7 +130,7 @@ function monte_carlo_solar_output(;num_samples=100, cnfl=[])
     # Obtain sample PV output for each location
     cumulative_pv_output = Array{Float64,1}(undef,0)
     for (lat, lon) in monte_carlo_coords
-        sleep(30)
+        sleep(10)
         pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
         if length(cumulative_pv_output) == 0
             append!(cumulative_pv_output, pv_output)
