@@ -64,4 +64,5 @@ include("functions/retrieve_nsrdb_data.jl")
 include("data/tariff_data.jl")
 include("data/tariff_data_alternative.jl")
 include("data/pvsystem_data.jl")
+include("data/select_utility.jl")
 include("data/consumer_data.jl");

@@ -5,7 +5,7 @@ using StatsBase
 using ArchGDAL
 const AG = ArchGDAL
 
-function monte_carlo_solar_output(;num_samples=100)
+function monte_carlo_solar_output(;num_samples=100, cnfl=[])
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"
     area_protegidas_gis_filename = "data/area_CNFL"
@@ -73,6 +73,31 @@ function monte_carlo_solar_output(;num_samples=100)
                             if !in(possible_coords, coords)
                                 can_add = true
                                 ag_coords = AG.createpoint(possible_coords[2],possible_coords[1])
+
+                                # Add a conditional check for whether the location is within CNFL service area or not
+                                # When we are constructing the CNFL dataset, this only adds a point if it's within a CNFL geom
+                                # When we are constructing the ICE dataset, this only adds a point that's NOT within any
+                                # Only do this when cnfl is defined: otherwise, assume we want national data
+                                if isassigned(cnfl, 1)
+                                    can_add = !cnfl[1]
+                                    num_features = AG.nfeature(cnfl_gis)
+                                    for i in 1:(num_features)
+                                        ArchGDAL.getfeature(cnfl_gis, i - 1) do feature
+                                            geom = AG.getgeomfield(feature, 0)
+                                            source = AG.getspatialref(geom)
+                                            AG.createcoordtrans(source, target) do transform
+                                                AG.transform!(geom, transform)
+                                                if AG.contains(geom, ag_coords)
+                                                    can_add = cnfl[1] # Can use this point because it is not in CNFL territory
+                                                end
+                                            end
+                                        end
+                                    end
+                                    if !can_add:
+                                        continue
+                                    end
+                                end
+                                
                                 num_features = AG.nfeature(area_protegidas_gis)
                                 for i in 1:(num_features)
                                     ArchGDAL.getfeature(area_protegidas_gis, i - 1) do feature
@@ -86,7 +111,7 @@ function monte_carlo_solar_output(;num_samples=100)
                                         end
                                     end
                                 end
-
+                                
                                 if can_add
                                     push!(coords, possible_coords)
                                 end
