@@ -6,7 +6,7 @@ using ArchGDAL
 const AG = ArchGDAL
 using Dates
 
-function monte_carlo_solar_output(;num_samples=50, cnfl=[])
+function monte_carlo_solar_output(;num_samples=5, cnfl=[])
     println(cnfl)
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"

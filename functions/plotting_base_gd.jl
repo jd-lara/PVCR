@@ -24,9 +24,9 @@ tariff_category_mappings = Dict([
 
 if !@isdefined pv_output
     if @isdefined(cnfl)
-        pv_output = monte_carlo_solar_output(num_samples=100, cnfl=cnfl)
+        pv_output = monte_carlo_solar_output(cnfl=cnfl)
     else
-        pv_output = monte_carlo_solar_output(num_samples=100)
+        pv_output = monte_carlo_solar_output()
     end
 end
 
