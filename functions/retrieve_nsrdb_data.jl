@@ -6,7 +6,7 @@ using ArchGDAL
 const AG = ArchGDAL
 using Dates
 
-function monte_carlo_solar_output(;num_samples=20, cnfl=[])
+function monte_carlo_solar_output(;num_samples=50, cnfl=[])
     println(cnfl)
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"
@@ -171,8 +171,9 @@ function get_nsrdb_sam_df(lat, lon, tz, year)
     sys.path.insert(0, "./functions")
     """
     call_nsrdb_and_ssc = pyimport("nsrdb_python")["call_nsrdb_and_ssc"];
-    print("Making NSRDB+SAM request at: ");
-    println(Dates.now());
+#     print(request_url)
+#     print("Making NSRDB+SAM request at: ");
+#     println(Dates.now());
     nsrdb_sam_df = call_nsrdb_and_ssc(request_url, lat, lon, tz);
     return nsrdb_sam_df;
 end
