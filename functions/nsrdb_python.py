@@ -1,6 +1,7 @@
 # needed to import a local module for SAM simulation off personal machine (requires installation at that location)
 import site
 import pandas as pd
+import time
 # Use site.addsitedir() to set the path to the SAM SDK API. Set path to the python directory.
 site.addsitedir("/Applications/sam-sdk-2015-6-30-r3/languages/python/")
 
@@ -8,6 +9,9 @@ from PySAM.PySSC import PySSC
 
 def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=-6,elevation=746):
     # Get raw solar radiation data from NSRDB
+    time.sleep(2)
+#     print("Making NSRDB request at: ")
+#     print(time.ctime())
     df = pd.read_csv(request_url, skiprows=2)
     
     # Resource inputs for SAM model:

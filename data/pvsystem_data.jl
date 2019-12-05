@@ -1,7 +1,7 @@
 if @isdefined(cnfl)
-    pv_output = monte_carlo_solar_output(num_samples=2, cnfl=cnfl)
+    pv_output = monte_carlo_solar_output(num_samples=100, cnfl=cnfl)
 else
-    pv_output = monte_carlo_solar_output(num_samples=2)
+    pv_output = monte_carlo_solar_output(num_samples=100)
 end
 
 PVRes = PVSystem(1.8,

@@ -4,8 +4,10 @@ using DelimitedFiles
 using StatsBase
 using ArchGDAL
 const AG = ArchGDAL
+using Dates
 
-function monte_carlo_solar_output(;num_samples=100, cnfl=[])
+function monte_carlo_solar_output(;num_samples=20, cnfl=[])
+    println(cnfl)
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"
     area_protegidas_gis_filename = "data/area_CNFL"
@@ -65,6 +67,7 @@ function monte_carlo_solar_output(;num_samples=100, cnfl=[])
 
                         # Run the weighted sampling, to obtain the coordinates we will sample NSRDB from
                         coords = []
+                        println("beginning to generate points")
                         while length(coords) < num_samples
                             possible_sample = sample(indices, weights)
                             possible_coords = box_to_coords(possible_sample)
@@ -117,6 +120,8 @@ function monte_carlo_solar_output(;num_samples=100, cnfl=[])
                                 end
                             end
                         end
+                        
+                        println("done generating points")
 
                         for coord in coords
                             push!(monte_carlo_coords, coord);
@@ -130,7 +135,11 @@ function monte_carlo_solar_output(;num_samples=100, cnfl=[])
     # Obtain sample PV output for each location
     cumulative_pv_output = Array{Float64,1}(undef,0)
     for (lat, lon) in monte_carlo_coords
-        sleep(10)
+#         println(lat,lon)
+        sleep(2) # THIS SHOULD WORK WHY DOESN'T IT WORK
+        start = Dates.now()
+        while(Dates.now()-start < Dates.Second(10))
+        end
         pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
         if length(cumulative_pv_output) == 0
             append!(cumulative_pv_output, pv_output)
@@ -162,6 +171,8 @@ function get_nsrdb_sam_df(lat, lon, tz, year)
     sys.path.insert(0, "./functions")
     """
     call_nsrdb_and_ssc = pyimport("nsrdb_python")["call_nsrdb_and_ssc"];
+    print("Making NSRDB+SAM request at: ");
+    println(Dates.now());
     nsrdb_sam_df = call_nsrdb_and_ssc(request_url, lat, lon, tz);
     return nsrdb_sam_df;
 end
