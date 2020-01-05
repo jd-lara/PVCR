@@ -82,10 +82,12 @@ function monte_carlo_solar_output(num_samples, cnfl)
 
                         # Run the weighted sampling, to obtain the coordinates we will sample NSRDB from
                         coords = []
-                        println("beginning to generate points")
+                        # Obtain sample PV output for each location
+                        cumulative_pv_output = Array{Float64,1}()
                         while length(coords) < num_samples
                             possible_sample = sample(indices, weights)
                             possible_coords = box_to_coords(possible_sample)
+                            println(possible_coords)
 
                             # Determine whether these coordinates have been already added, or are part of excluded parts of CR
                             if !in(possible_coords, coords)
@@ -130,45 +132,32 @@ function monte_carlo_solar_output(num_samples, cnfl)
                                     end
                                 end
                                 
+                                if !can_add
+                                    continue
+                                end
+                                
+                                pv_output = -1
+                                try
+                                    lat, lon = possible_coords
+                                    pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
+                                catch e
+                                    println("NSRDB errored out, won't add")
+                                    can_add = false # Not using this point because NSRDB doesn't like it
+                                end
+                                
                                 if can_add
                                     push!(coords, possible_coords)
+                                    if length(cumulative_pv_output) == 0
+                                        append!(cumulative_pv_output, pv_output)
+                                    else
+                                        cumulative_pv_output = hcat(cumulative_pv_output, pv_output)
+                                    end
                                 end
                             end
-                        end
-                        
-                        println("done generating points")
-
-                        for coord in coords
-                            push!(monte_carlo_coords, coord);
                         end
                     end
                 end
             end
-        end
-    end
-        
-    # Obtain sample PV output for each location
-    cumulative_pv_output = Array{Float64,1}()
-    for (lat, lon) in monte_carlo_coords
-        pv_output = -1
-        timeout = 4
-        println(string("starting while loop for lat = ",string(lat), " and lon = ", string(lon)))
-        while (pv_output == -1)
-            try
-                pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
-            catch e
-                start = Dates.now()
-                println(start)
-                while(Dates.now()-start < Dates.Second(timeout))
-                end
-                timeout = timeout * 2
-            end
-        end
-        println(string("ending while loop for lat = ",string(lat), " and lon = ", string(lon)))
-        if length(cumulative_pv_output) == 0
-            append!(cumulative_pv_output, pv_output)
-        else
-            cumulative_pv_output = hcat(cumulative_pv_output, pv_output)
         end
     end
     
