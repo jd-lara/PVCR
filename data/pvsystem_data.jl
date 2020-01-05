@@ -1,7 +1,7 @@
 if @isdefined(cnfl)
-    pv_output = monte_carlo_solar_output(cnfl=cnfl)
+    pv_output = averaged_monte_carlo_solar_output(cnfl=cnfl)
 else
-    pv_output = monte_carlo_solar_output()
+    pv_output = averaged_monte_carlo_solar_output()
 end
 
 PVRes = PVSystem(1.8,

@@ -6,8 +6,24 @@ using ArchGDAL
 const AG = ArchGDAL
 using Dates
 
-function monte_carlo_solar_output(;num_samples=5, cnfl=[])
-    println(cnfl)
+function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
+    # Get the individual data points for various locations across the country
+    provider = length(cnfl) == 0 ? "ALL" : (cnfl[1] == true ? "CNFL" : "ICE")
+    mc_filename = string("data/monte_carlo_data/", provider, "_", string(num_samples), ".txt")
+    if isfile(mc_filename)
+        mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
+    else
+        println("have to generate new data")
+        mc_pv_output = monte_carlo_solar_output(num_samples, cnfl)
+        open(mc_filename, "w") do io
+           writedlm(io, mc_pv_output)
+        end
+    end
+    # Average all of them, to return a normalized data set for a hypothetical "solar year"?
+    return sum(mc_pv_output, dims=2) ./ num_samples
+end
+
+function monte_carlo_solar_output(num_samples, cnfl)
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"
     area_protegidas_gis_filename = "data/area_CNFL"
@@ -25,7 +41,6 @@ function monte_carlo_solar_output(;num_samples=5, cnfl=[])
                 # The above 2 GIS data files are in a format which does not line up with latitude and longitude.
                 # We will run a transform to project it into lat-long
                 AG.importPROJ4("proj +proj=longlat") do target
-        
                 
                     # Get data corresponding to population density per ~5km square of the Earth's surface
                     AG.read(pop_density_filename) do pop_dataset
@@ -133,23 +148,31 @@ function monte_carlo_solar_output(;num_samples=5, cnfl=[])
     end
         
     # Obtain sample PV output for each location
-    cumulative_pv_output = Array{Float64,1}(undef,0)
+    cumulative_pv_output = Array{Float64,1}()
     for (lat, lon) in monte_carlo_coords
-#         println(lat,lon)
-        sleep(2) # THIS SHOULD WORK WHY DOESN'T IT WORK
-        start = Dates.now()
-        while(Dates.now()-start < Dates.Second(10))
+        pv_output = -1
+        timeout = 4
+        println(string("starting while loop for lat = ",string(lat), " and lon = ", string(lon)))
+        while (pv_output == -1)
+            try
+                pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
+            catch e
+                start = Dates.now()
+                println(start)
+                while(Dates.now()-start < Dates.Second(timeout))
+                end
+                timeout = timeout * 2
+            end
         end
-        pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
+        println(string("ending while loop for lat = ",string(lat), " and lon = ", string(lon)))
         if length(cumulative_pv_output) == 0
             append!(cumulative_pv_output, pv_output)
         else
-            cumulative_pv_output += pv_output
+            cumulative_pv_output = hcat(cumulative_pv_output, pv_output)
         end
     end
     
-    # Average all of them, to return a normalized data set for a hypothetical "solar year"?
-    return cumulative_pv_output ./ num_samples
+    return cumulative_pv_output
     
 end
 
