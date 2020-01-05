@@ -26,8 +26,8 @@ end
 function monte_carlo_solar_output(num_samples, cnfl)
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"
-    area_protegidas_gis_filename = "data/area_CNFL"
-    monte_carlo_coords = Array{Tuple{Float64, Float64}}(undef, 0)
+    area_protegidas_gis_filename = "data/Areaprotegidas"
+    pv_outputs_array = Array{Float64,1}()
 
     AG.registerdrivers() do
         # Get data corresponding to the location of CNFL-serviced districts, for later location sampling
@@ -51,8 +51,17 @@ function monte_carlo_solar_output(num_samples, cnfl)
                         max_lat = 11.2195684
                         min_lon = -85.956896
                         max_lon = -82.5060208
+                        
+                        # Alternate bounding box for CNFL (significantly speeds up point selection)
+                        if (isassigned(cnfl, 1) && cnfl[1])
+                            min_lat = 9.839327
+                            max_lat = 10.160209
+                            min_lon = -84.325326
+                            max_lon = -83.621292
+                        end
+                        
                         pop_band_width = AG.width(pop_band)
-                        pop_band_height = AG.height(pop_band)   
+                        pop_band_height = AG.height(pop_band)
                         max_lat_ind = ceil((90 - min_lat) * pop_band_height / 180)
                         min_lat_ind = min(ceil((90 - max_lat) * pop_band_height / 180), max_lat_ind - 1)
                         min_lon_ind = ceil((min_lon + 180) * pop_band_width / 360)
@@ -80,14 +89,22 @@ function monte_carlo_solar_output(num_samples, cnfl)
                         population_density /= sum(population_density)
                         weights = FrequencyWeights(population_density)
 
-                        # Run the weighted sampling, to obtain the coordinates we will sample NSRDB from
-                        coords = []
+                        # For ICE or non-CNFL, run a weighted sampling, to obtain the coordinates to sample NSRDB from
+                        # For CNFL, the coverage area is too small for this, so we just iterate through and choose spots
+                        cnfl_ind = 1
                         # Obtain sample PV output for each location
-                        cumulative_pv_output = Array{Float64,1}()
+                        coords = []
                         while length(coords) < num_samples
-                            possible_sample = sample(indices, weights)
+                            if (isassigned(cnfl, 1) && cnfl[1])
+                                if cnfl_ind > length(indices)
+                                    break
+                                end
+                                possible_sample = indices[cnfl_ind]
+                                cnfl_ind = cnfl_ind + 1
+                            else
+                                possible_sample = sample(indices, weights)
+                            end
                             possible_coords = box_to_coords(possible_sample)
-                            println(possible_coords)
 
                             # Determine whether these coordinates have been already added, or are part of excluded parts of CR
                             if !in(possible_coords, coords)
@@ -108,7 +125,8 @@ function monte_carlo_solar_output(num_samples, cnfl)
                                             AG.createcoordtrans(source, target) do transform
                                                 AG.transform!(geom, transform)
                                                 if AG.contains(geom, ag_coords)
-                                                    can_add = cnfl[1] # Can use this point because it is not in CNFL territory
+                                                    can_add = cnfl[1]
+                                                    println(string(string(possible_coords[1]),", ", string(possible_coords[2]), " is within a CNFL area"))
                                                 end
                                             end
                                         end
@@ -126,6 +144,7 @@ function monte_carlo_solar_output(num_samples, cnfl)
                                         AG.createcoordtrans(source, target) do transform
                                             AG.transform!(geom, transform)
                                             if AG.contains(geom, ag_coords)
+                                                println(string("but ", string(possible_coords[1]), ", ", string(possible_coords[2]), " is within a protected area so we can't use it"))
                                                 can_add = false # Not using this point because it is in an uninhabited location
                                             end
                                         end
@@ -141,16 +160,17 @@ function monte_carlo_solar_output(num_samples, cnfl)
                                     lat, lon = possible_coords
                                     pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
                                 catch e
-                                    println("NSRDB errored out, won't add")
+                                    println("but the NSRDB call failed, so we won't use it")
                                     can_add = false # Not using this point because NSRDB doesn't like it
                                 end
                                 
                                 if can_add
                                     push!(coords, possible_coords)
-                                    if length(cumulative_pv_output) == 0
-                                        append!(cumulative_pv_output, pv_output)
+                                    println(length(coords))
+                                    if length(pv_outputs_array) == 0
+                                        append!(pv_outputs_array, pv_output)
                                     else
-                                        cumulative_pv_output = hcat(cumulative_pv_output, pv_output)
+                                        pv_outputs_array = hcat(pv_outputs_array, pv_output)
                                     end
                                 end
                             end
@@ -161,7 +181,7 @@ function monte_carlo_solar_output(num_samples, cnfl)
         end
     end
     
-    return cumulative_pv_output
+    return pv_outputs_array
     
 end
 
@@ -183,9 +203,6 @@ function get_nsrdb_sam_df(lat, lon, tz, year)
     sys.path.insert(0, "./functions")
     """
     call_nsrdb_and_ssc = pyimport("nsrdb_python")["call_nsrdb_and_ssc"];
-#     print(request_url)
-#     print("Making NSRDB+SAM request at: ");
-#     println(Dates.now());
     nsrdb_sam_df = call_nsrdb_and_ssc(request_url, lat, lon, tz);
     return nsrdb_sam_df;
 end
@@ -239,13 +256,6 @@ function get_nsrdb_request_url(lat,lon,year)
     url = "http://developer.nrel.gov/api/solar/nsrdb_psm3_download.csv?wkt=POINT($(lon)%20$(lat))&names=$(year)&leap_day=$(leap_year)&interval=$(interval)&utc=$(utc)&full_name=$(your_name)&email=$(your_email)&affiliation=$(your_affiliation)&mailing_list=$(mailing_list)&reason=$(reason_for_use)&api_key=$(api_key)&attributes=$(attributes)";
     
     return url;
-
-    # The first two rows are not data values
-    # The column names and the "first row" are metadata identifiers and values, respectively
-    # The "second row" is what we'd consider the "column names" for the actual data, which is row 3 and beyond
-    # read the actual data, "row" 3 and below
-    # nsrdb_data_frame = read_csv(url, skiprows=2);
-    # return nsrdb_data_frame;
 end
 
 function plot_pysam_output(df, i=5030, j=40)
