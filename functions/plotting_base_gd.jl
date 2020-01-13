@@ -12,7 +12,18 @@ using GLM
 
 tariff_categories = ["Residential", "Commercial Industrial", "Medium Voltage"]
 
-# TODO Figure out what these individual tariff sub-categories are called/what they represent
+# Tariff types:
+# 1: Residential
+# 2: Residencial horaria
+# 4: Commercial y services mon-mica
+# 5: Comercios y servicios con potencia
+# 6: Industrial mon-mica
+# 7: Industrial con potencia
+# 8: Preferencial mon-mica
+# 9: Preferencial con potencia
+# 10: Promocional mon—mica
+# 11: Promocional con potencia
+# 12: Media tensi—n a
 tariff_category_mappings = Dict([
         (1, tariff_categories[1]),
         (4, tariff_categories[2]),
