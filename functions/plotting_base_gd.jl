@@ -202,33 +202,74 @@ function plot_tariff_category_with_two_regressions(company_data, tariff_category
     
     # Run a regression on the model data
     ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_category, " Consumer"))
-#     model_df = DataFrame()
-#     model_df[:CONSUMPTION] = consumption
-#     model_df[:PREDICTIONS] = model_predictions
-#     model_df[:CONSUMPTION] = map(map_to_float, model_df[:CONSUMPTION])
-#     model_df[:PREDICTIONS] = map(map_to_float, model_df[:PREDICTIONS])
-
-#     model_df_1 = filter(row -> (row.CONSUMPTION <= inflection_point), model_df)
-#     model_b_1, model_m_1 = coef(lm(@formula(PREDICTIONS ~ CONSUMPTION), model_df_1))
-#     y_vals_model_1 = model_m_1 * x_vals_1 .+ model_b_1
-#     ax1.plot(x_vals_1, y_vals_model_1, "--", c="r", label = string("Least-squares regression for model prediction below inflection point"))
-
-    
-#     model_df_2 = filter(row -> (row.CONSUMPTION > inflection_point), model_df)
-#     model_b_2, model_m_2 = coef(lm(@formula(PREDICTIONS ~ CONSUMPTION), model_df_2))
-#     y_vals_model_2 = model_m_2 * x_vals_2 .+ model_b_2
-#     ax1.plot(x_vals_2, y_vals_model_2, "--", c="r", label = string("Least-squares regression for model prediction above inflection point"))
-
-    
-    
-
-
-
-    
     title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
     legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
 #     colors = ["g", "c", "m", "y", "k"]
+end
+
+function plot_tariff_category_with_many_regressions(company_data, tariff_category, company_name, consumption, model_predictions, inflection_points=[])
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    colors = ["g", "c", "m", "y", "k"]
     
+    # Collect the tariff-relevant data
+    tariff_data = Array{DataFrame}(undef,1)
+    for (tariff_num, tariff_cat) in tariff_category_mappings
+        if tariff_cat != tariff_category
+            continue
+        end
+        tariff_df = filter(row -> (!ismissing(row.CODIGO_TARIFA) && row.CODIGO_TARIFA == string(tariff_num)), company_data)
+        if !isassigned(tariff_data, 1)
+            tariff_data[1] = tariff_df
+        else
+            append!(tariff_data[1], tariff_df)
+        end
+    end
+    
+    # Get least-squares regression of the data
+    t_consumption, t_installation = create_consumption_and_installation_arrays(tariff_data[1])
+    combined = DataFrame()
+    combined[:CONSUMPTION] = t_consumption
+    combined[:INSTALLATION] = t_installation
+
+    function map_to_float(str)
+        try
+            convert(Float64, str) 
+        catch 
+            return(NA) 
+        end
+    end
+    
+    combined[:CONSUMPTION] = map(map_to_float, combined[:CONSUMPTION])
+    combined[:INSTALLATION] = map(map_to_float, combined[:INSTALLATION])
+        
+    if length(inflection_points) == 0 || inflection_points[1] != 0
+        pushfirst!(inflection_points, 0)
+    end
+    for (index, point) in enumerate(inflection_points)
+        color = popfirst!(colors)
+        next_point = index == length(inflection_points) ? Inf : inflection_points[index + 1]
+        combined_new = filter(row -> (point <= row.CONSUMPTION < next_point), combined)
+        if size(combined_new)[1] == 0
+            continue
+        end
+        data_b, data_m = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined_new))
+        t_consumption_new = combined_new[:CONSUMPTION]
+        t_installation_new = combined_new[:INSTALLATION]
+        ax1.scatter(t_consumption_new, t_installation_new, c=color, marker=".", alpha=0.1, label = string("Actual PV System Installation for a ", tariff_category, " Consumer using between ", point, " and ", next_point, " kWh per month"))
+        
+        next_point = next_point == Inf ? ax1.get_xlim()[2] : next_point
+
+        x_vals = point:(next_point-point)/100:next_point
+        y_vals = data_m * x_vals .+ data_b
+        ax1.plot(x_vals, y_vals, "--", c=color, label = string("Least-squares regression for actual installation of consumers using between ", point, " and ", next_point, " kWh per month"))
+    end
+    
+    # Run a regression on the model data
+    ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_category, " Consumer"))
+    
+    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
+    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
     
 end
 
