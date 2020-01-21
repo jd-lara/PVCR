@@ -9,6 +9,7 @@ using Dates
 function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
     # Get the individual data points for various locations across the country
     provider = length(cnfl) == 0 ? "ALL" : (cnfl[1] == true ? "CNFL" : "ICE")
+    num_samples = (length(cnfl) == 1 && cnfl[1] == true) ? min(num_samples, 37) : num_samples
     mc_filename = string("data/monte_carlo_data/", provider, "_", string(num_samples), ".txt")
     if isfile(mc_filename)
         mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
@@ -19,6 +20,7 @@ function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
            writedlm(io, mc_pv_output)
         end
     end
+    
     # Average all of them, to return a normalized data set for a hypothetical "solar year"?
     return sum(mc_pv_output, dims=2) ./ num_samples
 end
@@ -66,6 +68,7 @@ function monte_carlo_solar_output(num_samples, cnfl)
                         min_lat_ind = min(ceil((90 - max_lat) * pop_band_height / 180), max_lat_ind - 1)
                         min_lon_ind = ceil((min_lon + 180) * pop_band_width / 360)
                         max_lon_ind = max(ceil((max_lon + 180) * pop_band_width / 360), min_lon_ind + 1)
+                        print(max_lat_ind, min_lat_ind, min_lon_ind, max_lon_ind)
                         rows = UnitRange{Int}(min_lat_ind, max_lat_ind)
                         cols = UnitRange{Int}(min_lon_ind, max_lon_ind)
                         bounding_box_contents = AG.read(pop_band, rows, cols)
