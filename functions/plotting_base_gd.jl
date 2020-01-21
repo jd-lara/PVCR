@@ -273,6 +273,47 @@ function plot_tariff_category_with_many_regressions(company_data, tariff_categor
     
 end
 
+function plot_with_subtariff_wise_regression(company_data, tariff_category, company_name, consumption, model_predictions)
+    colors = ["g", "c", "m", "y", "k"]
+    fig = plt.figure()
+    # Loop through all tariffs that we care about
+    for (tariff_num, tariff_cat) in tariff_category_mappings
+        if tariff_cat != tariff_category
+            continue
+        end
+        subtariff_values = filter(row -> (!ismissing(row.CODIGO_TARIFA) && row.CODIGO_TARIFA == string(tariff_num)), company_data)
+        # Get least-squares regression of the data
+        t_consumption, t_installation = create_consumption_and_installation_arrays(subtariff_values)
+        combined = DataFrame()
+        combined[:CONSUMPTION] = t_consumption
+        combined[:INSTALLATION] = t_installation
+
+        function map_to_float(str)
+            try
+                convert(Float64, str) 
+            catch 
+                return(NA) 
+            end
+        end
+
+        combined[:CONSUMPTION] = map(map_to_float, combined[:CONSUMPTION])
+        combined[:INSTALLATION] = map(map_to_float, combined[:INSTALLATION])
+        
+        color = popfirst!(colors)
+        data_b, data_m = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined))
+        new_axis = fig.add_subplot(111)
+        new_axis.scatter(t_consumption, t_installation, c=color, marker=".", alpha=0.2, label = string("Actual PV System Installation for a subtariff ", tariff_num, " Consumer"))
+        xlims = (min(t_consumption...), max(t_consumption...))
+
+        x_vals = xlims[1]:(xlims[2]-xlims[1])/100:xlims[2]
+        y_vals = data_m * x_vals .+ data_b
+        new_axis.plot(x_vals, y_vals, "--", c=color, label = string("Least-squares regression for actual installation of subtariff ", tariff_num, " consumers"))
+    end
+    
+    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
+    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+end
+
 ##################################
 
 function plot_segmented_tariff_category_with_regression(company_data, tariff_category, company_name, consumption, model_predictions, regression_limit=0, individual_regressions=false)

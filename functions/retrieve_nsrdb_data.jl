@@ -21,7 +21,7 @@ function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
         end
     end
     
-    # Average all of them, to return a normalized data set for a hypothetical "solar year"?
+    # Average all of them, to return a normalized data set for a hypothetical "solar year"
     return sum(mc_pv_output, dims=2) ./ num_samples
 end
 
