@@ -147,3 +147,47 @@ function optimal_pv(consumer::T, system::PVSystem, capacity_range::StepRangeLen{
 	end
     
 end		
+
+function plot_monte_carlo_model_prediction(company, tariff, random_consumption, mc_data; width=50)
+    fig = plt.figure()
+    ax1 = fig.add_subplot()
+    ax1.boxplot([[mc_data[j][i] for j in 1:size(mc_data,1)] for i in 1:size(mc_data[1],1)], positions=random_consumption, manage_ticks=false, widths=width)
+#     ax1.set_xticks(random_consumption)
+#     ax1.set_xticklabels(random_consumption, rotation="vertical")
+    ylabel("Optimal PV System Capacity [kW]")
+    xlabel("Consumer Monthly Energy use [kWh]")
+    grid("on");
+    title(string("Optimal System Choice for ", company, " ", tariff, " Consumer (Various Locations)"))
+end
+
+# NOTE: be sure to set the appropriate tariff before calling this function
+function retrieve_monte_carlo_model_prediction(company, num_samples, tariff, tariff_obj, random_consumption, cap_range)
+    mc_filename = string("data/monte_carlo_data/", company, "_", num_samples, ".txt")
+    if isfile(mc_filename)
+        mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
+    else
+        println("Can't find NSRDB+SAM output")
+        return
+    end
+    
+    mc_data = []
+
+    for pv_output in eachcol(mc_pv_output)
+        mcPV = -1 # Placeholder because Julia's "Nothing" is strange and I don't understand it yet
+        if tariff == "R"
+            mcPV = newPVRes(pv_output)
+        elseif tariff == "CI"
+            mcPV = newPVComInd(pv_output)
+        else
+            mcPV = newPVTMT(pv_output)
+        end
+        pv_data = []
+        for (ix, co) in enumerate(random_consumption)
+            tariff_obj.econsumption = co; get_pmax(tariff_obj);
+            new_data = optimal_pv(tariff_obj, mcPV, cap_range, BAC1, tariff_increase = true)
+            push!(pv_data, new_data[1][2])
+        end
+        push!(mc_data, pv_data)
+    end
+    return mc_data
+end
