@@ -24,6 +24,21 @@ tariff_categories = ["Residential", "Commercial Industrial", "Medium Voltage"]
 # 10: Promocional mon—mica
 # 11: Promocional con potencia
 # 12: Media tensi—n a
+
+tariff_to_name = Dict([
+        (1, "Residential"),
+        (2, "Residencial horaria"),
+        (4, "Commercial y services mon-mica"),
+        (5, "Comercios y servicios con potencia"),
+        (6, "Industrial mon-mica"),
+        (7, "Industrial con potencia"),
+        (8, "Preferencial mon-mica"),
+        (9, "Preferencial con potencia"),
+        (10, "Promocional mon—mica"),
+        (11, "Promocional con potencia"),
+        (12, "Media tensi—n a")
+        ])
+
 tariff_category_mappings = Dict([
         (1, tariff_categories[1]),
         (4, tariff_categories[2]),
@@ -208,8 +223,6 @@ function plot_tariff_category_with_two_regressions(company_data, tariff_category
 end
 
 function plot_tariff_category_with_many_regressions(company_data, tariff_category, company_name, consumption, model_predictions, inflection_points=[])
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
     colors = ["g", "c", "m", "y", "k"]
     
     # Collect the tariff-relevant data
@@ -246,7 +259,11 @@ function plot_tariff_category_with_many_regressions(company_data, tariff_categor
     if length(inflection_points) == 0 || inflection_points[1] != 0
         pushfirst!(inflection_points, 0)
     end
+    
+    
     for (index, point) in enumerate(inflection_points)
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
         color = popfirst!(colors)
         next_point = index == length(inflection_points) ? Inf : inflection_points[index + 1]
         combined_new = filter(row -> (point <= row.CONSUMPTION < next_point), combined)
@@ -263,24 +280,25 @@ function plot_tariff_category_with_many_regressions(company_data, tariff_categor
         x_vals = point:(next_point-point)/100:next_point
         y_vals = data_m * x_vals .+ data_b
         ax1.plot(x_vals, y_vals, "--", c=color, label = string("Least-squares regression for actual installation of consumers using between ", point, " and ", next_point, " kWh per month"))
+        # Run a regression on the model data
+        ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_category, " Consumer"))
+
+        title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
+        legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
     end
     
-    # Run a regression on the model data
-    ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_category, " Consumer"))
     
-    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
-    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
     
 end
 
 function plot_with_subtariff_wise_regression(company_data, tariff_category, company_name, consumption, model_predictions)
     colors = ["g", "c", "m", "y", "k"]
-    fig = plt.figure()
     # Loop through all tariffs that we care about
     for (tariff_num, tariff_cat) in tariff_category_mappings
         if tariff_cat != tariff_category
             continue
         end
+        fig = plt.figure()
         subtariff_values = filter(row -> (!ismissing(row.CODIGO_TARIFA) && row.CODIGO_TARIFA == string(tariff_num)), company_data)
         # Get least-squares regression of the data
         t_consumption, t_installation = create_consumption_and_installation_arrays(subtariff_values)
@@ -308,10 +326,13 @@ function plot_with_subtariff_wise_regression(company_data, tariff_category, comp
         x_vals = xlims[1]:(xlims[2]-xlims[1])/100:xlims[2]
         y_vals = data_m * x_vals .+ data_b
         new_axis.plot(x_vals, y_vals, "--", c=color, label = string("Least-squares regression for actual installation of subtariff ", tariff_num, " consumers"))
+        
+        new_axis.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_category, " Consumer"))
+        title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_to_name[tariff_num]))
+        legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
     end
     
-    title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
-    legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
+    
 end
 
 ##################################
