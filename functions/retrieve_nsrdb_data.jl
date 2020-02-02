@@ -6,11 +6,16 @@ using ArchGDAL
 const AG = ArchGDAL
 using Dates
 
-function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
-    # Get the individual data points for various locations across the country
+function get_mc_data_filename(num_samples, cnfl)
     provider = length(cnfl) == 0 ? "ALL" : (cnfl[1] == true ? "CNFL" : "ICE")
     num_samples = (length(cnfl) == 1 && cnfl[1] == true) ? min(num_samples, 37) : num_samples
     mc_filename = string("data/monte_carlo_data/", provider, "_", string(num_samples), ".txt")
+    return mc_filename
+end
+
+function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
+    # Get the individual data points for various locations across the country
+    mc_filename = get_mc_data_filename(num_samples, cnfl)
     if isfile(mc_filename)
         mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
     else
@@ -25,7 +30,14 @@ function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
     return sum(mc_pv_output, dims=2) ./ num_samples
 end
 
-function monte_carlo_solar_output(num_samples, cnfl)
+function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
+    if (use_cached)
+        mc_filename = get_mc_data_filename(num_samples, cnfl)
+        if isfile(mc_filename)
+            mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
+            return mc_pv_output
+        end
+    end
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"
     area_protegidas_gis_filename = "data/Areaprotegidas"
