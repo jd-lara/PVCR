@@ -8,7 +8,7 @@ using Dates
 
 function get_mc_data_filename(num_samples, cnfl)
     provider = length(cnfl) == 0 ? "ALL" : (cnfl[1] == true ? "CNFL" : "ICE")
-    num_samples = (length(cnfl) == 1 && cnfl[1] == true) ? min(num_samples, 36) : num_samples
+    num_samples = (length(cnfl) == 1) ? (cnfl[1] == true ? min(num_samples, 36) : min(num_samples, 99)) : num_samples
     mc_filename = string("data/monte_carlo_data/", provider, "_", string(num_samples), ".txt")
     return (num_samples, mc_filename)
 end
