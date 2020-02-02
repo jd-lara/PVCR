@@ -8,14 +8,14 @@ using Dates
 
 function get_mc_data_filename(num_samples, cnfl)
     provider = length(cnfl) == 0 ? "ALL" : (cnfl[1] == true ? "CNFL" : "ICE")
-    num_samples = (length(cnfl) == 1 && cnfl[1] == true) ? min(num_samples, 37) : num_samples
+    num_samples = (length(cnfl) == 1 && cnfl[1] == true) ? min(num_samples, 36) : num_samples
     mc_filename = string("data/monte_carlo_data/", provider, "_", string(num_samples), ".txt")
-    return mc_filename
+    return (num_samples, mc_filename)
 end
 
 function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
     # Get the individual data points for various locations across the country
-    mc_filename = get_mc_data_filename(num_samples, cnfl)
+    num_samples, mc_filename = get_mc_data_filename(num_samples, cnfl)
     if isfile(mc_filename)
         mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
     else
@@ -32,7 +32,7 @@ end
 
 function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
     if (use_cached)
-        mc_filename = get_mc_data_filename(num_samples, cnfl)
+        _, mc_filename = get_mc_data_filename(num_samples, cnfl)
         if isfile(mc_filename)
             mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
             return mc_pv_output
