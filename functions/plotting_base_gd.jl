@@ -194,6 +194,12 @@ function plot_tariff_category_with_two_regressions(company_data, tariff_category
     
     combined[:CONSUMPTION] = map(map_to_float, combined[:CONSUMPTION])
     combined[:INSTALLATION] = map(map_to_float, combined[:INSTALLATION])
+    
+    # Specific filter for data cleaning
+    cons_upper_bound = company_name=="CNFL" ? 80000 : 400000
+    combined = filter(row -> (row.CONSUMPTION < cons_upper_bound), combined)
+    
+    
 
     combined_1 = filter(row -> (row.CONSUMPTION <= inflection_point), combined)
     data_b_1, data_m_1 = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined_1))
@@ -202,6 +208,7 @@ function plot_tariff_category_with_two_regressions(company_data, tariff_category
     ax1.scatter(t_consumption_1, t_installation_1, c="g", marker=".", alpha=0.2, label = string("Actual PV System Installation for a ", tariff_category, " Consumer using less than ", inflection_point, " kWh per month"))    
     
     combined_2 = filter(row -> (row.CONSUMPTION > inflection_point), combined)
+    
     data_b_2, data_m_2 = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined_2))
     t_consumption_2 = combined_2[:CONSUMPTION]
     t_installation_2 = combined_2[:INSTALLATION]
@@ -238,7 +245,7 @@ function plot_tariff_category_with_many_regressions(company_data, tariff_categor
             append!(tariff_data[1], tariff_df)
         end
     end
-    
+        
     # Get least-squares regression of the data
     t_consumption, t_installation = create_consumption_and_installation_arrays(tariff_data[1])
     combined = DataFrame()
@@ -255,7 +262,16 @@ function plot_tariff_category_with_many_regressions(company_data, tariff_categor
     
     combined[:CONSUMPTION] = map(map_to_float, combined[:CONSUMPTION])
     combined[:INSTALLATION] = map(map_to_float, combined[:INSTALLATION])
-        
+
+    # Remove values where consumption is less than 30kW a month
+    # This is a minimum requirement in CR, numbers lower than 30 indicate they're paying for but not using electricity
+    combined = filter(row -> (row.CONSUMPTION >= 30), combined)
+    early_consumption = company_name == "CNFL" ? 300 : 400
+    max_early_install = company_name == "CNFL" ? 5 : 10
+    combined = filter(row -> !(row.CONSUMPTION < early_consumption && row.INSTALLATION > max_early_install), combined)
+    late_consumption = company_name == "CNFL" ? 8000 : 20000
+    combined = filter(row -> (row.CONSUMPTION < late_consumption), combined)
+    
     if length(inflection_points) == 0 || inflection_points[1] != 0
         pushfirst!(inflection_points, 0)
     end
@@ -267,6 +283,7 @@ function plot_tariff_category_with_many_regressions(company_data, tariff_categor
         color = popfirst!(colors)
         next_point = index == length(inflection_points) ? Inf : inflection_points[index + 1]
         combined_new = filter(row -> (point <= row.CONSUMPTION < next_point), combined)
+        
         if size(combined_new)[1] == 0
             continue
         end
@@ -317,11 +334,16 @@ function plot_with_subtariff_wise_regression(company_data, tariff_category, comp
         combined[:CONSUMPTION] = map(map_to_float, combined[:CONSUMPTION])
         combined[:INSTALLATION] = map(map_to_float, combined[:INSTALLATION])
         
+        # Specific filters for data cleaning
+        if (tariff_num == 4 || tariff_num == 7)
+            combined = filter(row -> (row.CONSUMPTION < 50000), combined)
+        end
+        
         color = popfirst!(colors)
         data_b, data_m = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined))
         new_axis = fig.add_subplot(111)
-        new_axis.scatter(t_consumption, t_installation, c=color, marker=".", alpha=0.2, label = string("Actual PV System Installation for a subtariff ", tariff_num, " Consumer"))
-        xlims = (min(t_consumption...), max(t_consumption...))
+        new_axis.scatter(combined[:CONSUMPTION], combined[:INSTALLATION], c=color, marker=".", alpha=0.2, label = string("Actual PV System Installation for a subtariff ", tariff_num, " Consumer"))
+        xlims = (min(combined[:CONSUMPTION]...), max(combined[:CONSUMPTION]...))
 
         x_vals = xlims[1]:(xlims[2]-xlims[1])/100:xlims[2]
         y_vals = data_m * x_vals .+ data_b
