@@ -340,14 +340,21 @@ function plot_with_subtariff_wise_regression(company_data, tariff_category, comp
         end
         
         color = popfirst!(colors)
-        data_b, data_m = coef(lm(@formula(INSTALLATION ~ CONSUMPTION), combined))
         new_axis = fig.add_subplot(111)
         new_axis.scatter(combined[:CONSUMPTION], combined[:INSTALLATION], c=color, marker=".", alpha=0.2, label = string("Actual PV System Installation for a subtariff ", tariff_num, " Consumer"))
         xlims = (min(combined[:CONSUMPTION]...), max(combined[:CONSUMPTION]...))
 
+        linear_model = lm(@formula(INSTALLATION ~ CONSUMPTION), combined)
+        data_b, data_m = coef(linear_model)
         x_vals = xlims[1]:(xlims[2]-xlims[1])/100:xlims[2]
         y_vals = data_m * x_vals .+ data_b
         new_axis.plot(x_vals, y_vals, "--", c=color, label = string("Least-squares regression for actual installation of subtariff ", tariff_num, " consumers"))
+        
+        stderr_b, stderr_m = stderror(linear_model)
+        y_vals_2 = ((data_m + stderr_m) * x_vals .+ (data_b + stderr_b))
+        new_axis.plot(x_vals, y_vals_2, "--", c="gray", label = string("Error on Least-squares regression"))
+        y_vals_3 = ((data_m - stderr_m) * x_vals .+ (data_b - stderr_b))
+        new_axis.plot(x_vals, y_vals_3, "--", c="gray", label = string("Error on Least-squares regression"))
         
         new_axis.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_category, " Consumer"))
         title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_to_name[tariff_num]))
