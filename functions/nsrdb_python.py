@@ -1,11 +1,19 @@
 # needed to import a local module for SAM simulation off personal machine (requires installation at that location)
 import site
+import pandas as pd
+import time
 # Use site.addsitedir() to set the path to the SAM SDK API. Set path to the python directory.
 site.addsitedir("/Applications/sam-sdk-2015-6-30-r3/languages/python/")
 
 from PySAM.PySSC import PySSC
 
-def call_ssc_with_dataframe(df,lat=9.817934,lon=-84.070552,timezone=1,elevation=0):
+def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=-6,elevation=746):
+    # Get raw solar radiation data from NSRDB
+    time.sleep(2)
+#     print("Making NSRDB request at: ")
+#     print(time.ctime())
+    df = pd.read_csv(request_url, skiprows=2)
+    
     # Resource inputs for SAM model:
     ssc = PySSC()
     wfd = ssc.data_create()
@@ -35,7 +43,7 @@ def call_ssc_with_dataframe(df,lat=9.817934,lon=-84.070552,timezone=1,elevation=
     # See https://sam.nrel.gov/sites/default/files/content/virtual_conf_july_2013/07-sam-virtual-conference-2013-woodcock.pdf
     ssc.data_set_number(dat, b'dc_ac_ratio', 1.1)
     # Set tilt of system in degrees
-    ssc.data_set_number(dat, b'tilt', 25)
+    ssc.data_set_number(dat, b'tilt', 8.5)
     # Set azimuth angle (in degrees) from north (0 degrees)
     ssc.data_set_number(dat, b'azimuth', 180)
     # Set the inverter efficency
@@ -54,3 +62,4 @@ def call_ssc_with_dataframe(df,lat=9.817934,lon=-84.070552,timezone=1,elevation=
     mod = ssc.module_create(b'pvwattsv5');
     ssc.module_exec(mod, dat)
     df["Generation"] = ssc.data_get_array(dat, b'gen')
+    return df;
