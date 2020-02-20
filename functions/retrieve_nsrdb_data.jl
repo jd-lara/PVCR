@@ -5,12 +5,23 @@ using StatsBase
 using ArchGDAL
 const AG = ArchGDAL
 using Dates
+using DataFrames
+
+const ICE_SAMPLE_NUM = 100
+const CNFL_SAMPLE_NUM = 36
 
 function get_mc_data_filename(num_samples, cnfl)
     provider = length(cnfl) == 0 ? "ALL" : (cnfl[1] == true ? "CNFL" : "ICE")
-    num_samples = (length(cnfl) == 1) ? (cnfl[1] == true ? min(num_samples, 36) : min(num_samples, 99)) : num_samples
+    num_samples = (length(cnfl) == 1) ? (cnfl[1] == true ? min(num_samples, CNFL_SAMPLE_NUM) : min(num_samples, ICE_SAMPLE_NUM)) : num_samples
     mc_filename = string("data/monte_carlo_data/", provider, "_", string(num_samples), ".txt")
     return (num_samples, mc_filename)
+end
+
+function get_mc_coords_filename(num_samples, cnfl)
+    provider = length(cnfl) == 0 ? "ALL" : (cnfl[1] == true ? "CNFL" : "ICE")
+    num_samples = (length(cnfl) == 1) ? (cnfl[1] == true ? min(num_samples, CNFL_SAMPLE_NUM) : min(num_samples, ICE_SAMPLE_NUM)) : num_samples
+    mc_filename = string("data/monte_carlo_data/", provider, "_", string(num_samples), "_COORDS.txt")
+    return mc_filename
 end
 
 function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
@@ -20,9 +31,13 @@ function averaged_monte_carlo_solar_output(;num_samples=100, cnfl=[])
         mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
     else
         println("have to generate new data")
-        mc_pv_output = monte_carlo_solar_output(num_samples, cnfl)
+        mc_pv_output, mc_locations = monte_carlo_solar_output(num_samples, cnfl)
         open(mc_filename, "w") do io
            writedlm(io, mc_pv_output)
+        end
+        coords_filename = get_mc_coords_filename(num_samples, cnfl)
+        open(coords_filename, "w") do io
+           writedlm(io, mc_locations)
         end
     end
     
@@ -33,15 +48,20 @@ end
 function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
     if (use_cached)
         _, mc_filename = get_mc_data_filename(num_samples, cnfl)
-        if isfile(mc_filename)
+        mc_coords_filename = get_mc_coords_filename(num_samples, cnfl)
+        if isfile(mc_filename) && isfile(mc_coords_filename)
             mc_pv_output = readdlm(mc_filename, '\t', Float64, '\n')
-            return mc_pv_output
+            mc_coords = readdlm(mc_filename, '\t', Float64, '\n')
+            return (mc_pv_output, mc_coords)
         end
     end
     pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
     cnfl_gis_filename = "data/area_CNFL"
     area_protegidas_gis_filename = "data/Areaprotegidas"
+    cr_map_filename = "data/CRI_adm/CRI_adm0.shp"
     pv_outputs_array = Array{Float64,1}()
+    
+    coords = []
 
     AG.registerdrivers() do
         # Get data corresponding to the location of CNFL-serviced districts, for later location sampling
@@ -80,7 +100,6 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
                         min_lat_ind = min(ceil((90 - max_lat) * pop_band_height / 180), max_lat_ind - 1)
                         min_lon_ind = ceil((min_lon + 180) * pop_band_width / 360)
                         max_lon_ind = max(ceil((max_lon + 180) * pop_band_width / 360), min_lon_ind + 1)
-                        print(max_lat_ind, min_lat_ind, min_lon_ind, max_lon_ind)
                         rows = UnitRange{Int}(min_lat_ind, max_lat_ind)
                         cols = UnitRange{Int}(min_lon_ind, max_lon_ind)
                         bounding_box_contents = AG.read(pop_band, rows, cols)
@@ -108,7 +127,6 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
                         # For CNFL, the coverage area is too small for this, so we just iterate through and choose spots
                         cnfl_ind = 1
                         # Obtain sample PV output for each location
-                        coords = []
                         while length(coords) < num_samples
                             if (isassigned(cnfl, 1) && cnfl[1])
                                 if cnfl_ind > length(indices)
@@ -123,9 +141,27 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
 
                             # Determine whether these coordinates have been already added, or are part of excluded parts of CR
                             if !in(possible_coords, coords)
-                                can_add = true
+                                can_add = false
                                 ag_coords = AG.createpoint(possible_coords[2],possible_coords[1])
 
+                                # Is this point even on land, or is it over the ocean?
+                                AG.read(cr_map_filename) do cr_map_dataset
+                                    cr_map_gis = AG.getlayer(cr_map_dataset, 0)
+                                    num_features = AG.nfeature(cr_map_gis)
+                                    for i in 1:(num_features)
+                                        ArchGDAL.getfeature(cr_map_gis, i - 1) do feature
+                                            geom = AG.getgeomfield(feature, 0)
+                                            if AG.contains(geom, ag_coords)
+                                                can_add = true
+                                            end
+                                        end
+                                    end
+                                end
+                                
+                                if !can_add
+                                    continue
+                                end
+                                
                                 # Add a conditional check for whether the location is within CNFL service area or not
                                 # When we are constructing the CNFL dataset, this only adds a point if it's within a CNFL geom
                                 # When we are constructing the ICE dataset, this only adds a point that's NOT within any
@@ -196,7 +232,9 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
         end
     end
     
-    return pv_outputs_array
+    coords = convert(Array{Float64,2}, DataFrame(Latitude = [x[1] for x in coords], Longitude = [x[2] for x in coords]))
+    
+    return (pv_outputs_array, coords)
     
 end
 
@@ -220,7 +258,7 @@ function get_nsrdb_sam_df(lat, lon, tz, year)
     call_nsrdb_and_ssc = pyimport("nsrdb_python")["call_nsrdb_and_ssc"];
     nsrdb_sam_df = call_nsrdb_and_ssc(request_url, lat, lon, tz);
     return nsrdb_sam_df;
-end
+    end
 
 function get_nsrdb_request_url(lat,lon,year)
     # Declare all variables as strings. Spaces must be replaced with "+", i.e., change "John Smith" to "John+Smith".
