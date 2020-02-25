@@ -103,13 +103,28 @@ function plot_consumption_and_installation(consumption_and_installation, tariff_
     return the_plot
 end
 
-function plot_base_GD_vs_economically_rational(consumption_and_installation, tariff_name, company_name, consumption, model_predictions)
+function plot_base_GD_vs_economically_rational(consumption_and_installation, tariff_name, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing)
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     # Plot out the actual PV system sizes that people have based on their energy bills
-    ax1.scatter(consumption_and_installation[1], consumption_and_installation[2], marker=".", label = string("Actual PV System Installation for ", tariff_name, " Consumer"))
+    ax1.scatter(consumption_and_installation[1], consumption_and_installation[2], marker=".", c = "#ffdf22", label = string("Actual PV System Installation for ", tariff_name, " Consumer"))
     # Plot out the installation predicted by the economically rational model
-    ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_name, " Consumer"))
+    if (length(model_descriptions) > 0)
+        for i in 1:length(model_descriptions)
+            description = model_descriptions[i]
+            model_prediction = model_predictions[i]
+            ax1.plot(consumption, model_prediction, label = string("Optimal PV System for ", tariff_name, " Consumer: ", description))
+        end
+    else
+        ax1.plot(consumption, model_predictions, c = "r", label = string("Optimal PV System for ", tariff_name, " Consumer"))
+    end
+    if x_max !== nothing
+        plt.xlim(0,x_max)
+    end
+    if y_max !== nothing
+        plt.ylim(0,y_max)
+    end
+    
     legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
     ylabel("PV System Capacity [kW]")
     xlabel("Consumer Monthly Energy use [kWh]")
@@ -117,7 +132,7 @@ function plot_base_GD_vs_economically_rational(consumption_and_installation, tar
     title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_name))
 end
   
-function plot_single_tariff_category_per_company_with_model_prediction(company_data, tariff_category, company_name, consumption, model_predictions)
+function plot_single_tariff_category_per_company_with_model_prediction(company_data, tariff_category, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing)
     company_data_split_by_tariff_category = Array{DataFrame}(undef,3)
 
     # Loop through all tariffs that we care about
@@ -134,7 +149,7 @@ function plot_single_tariff_category_per_company_with_model_prediction(company_d
     category_index = findfirst(t -> t == tariff_category, tariff_categories)
     
     plot_base_GD_vs_economically_rational(create_consumption_and_installation_arrays(
-                company_data_split_by_tariff_category[category_index]), tariff_categories[category_index], company_name, consumption, model_predictions)
+                company_data_split_by_tariff_category[category_index]), tariff_categories[category_index], company_name, consumption, model_predictions; model_descriptions=model_descriptions, x_max=x_max, y_max=y_max)
 end
 
 function plot_all_tariffs_per_company(company_data, company_name)
