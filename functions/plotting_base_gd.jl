@@ -56,12 +56,15 @@ if !@isdefined pv_output
     end
 end
 
+# Since the installed PV Systems are very unlikely to be fully efficient, we will add a loss factor
+adjusted_pv_output = pv_output * 0.7
+
 output_by_month = Array{Float64}(undef,12)
 # First entry for looping purposes only
 days_per_month = [0,31,28,31,30,31,30,31,31,30,31,30,31]
 
 for i=1:12
-    output_by_month[i] = sum(pv_output[sum(days_per_month[1:i])*24+1:sum(days_per_month[1:i+1])*24])
+    output_by_month[i] = sum(adjusted_pv_output[sum(days_per_month[1:i])*24+1:sum(days_per_month[1:i+1])*24])
 end     
 
 # This function cleans up the data for a particular utility+tariff
@@ -103,11 +106,22 @@ function plot_consumption_and_installation(consumption_and_installation, tariff_
     return the_plot
 end
 
-function plot_base_GD_vs_economically_rational(consumption_and_installation, tariff_name, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing)
+function plot_base_GD_vs_economically_rational(consumption_and_installation, tariff_name, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing, linreg=false)
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     # Plot out the actual PV system sizes that people have based on their energy bills
     ax1.scatter(consumption_and_installation[1], consumption_and_installation[2], marker=".", c = "#ffdf22", label = string("Actual PV System Installation for ", tariff_name, " Consumer"))
+    if (linreg)
+#         print(typeof(consumption_and_installation))
+        cons_and_install = DataFrame()
+        cons_and_install[:CONS] = consumption_and_installation[1]
+        cons_and_install[:INSTALL] = consumption_and_installation[2]
+        data_b, data_m = coef(lm(@formula(INSTALL ~ CONS), cons_and_install))
+        xlims = ax1.get_xlim()
+        x_vals = xlims[1]:(xlims[2]-xlims[1])/100:xlims[2]
+        y_vals = data_m * x_vals .+ data_b
+        ax1.plot(x_vals, y_vals, "--", c="k", label = string("Least-squares regression for actual consumer installation"))
+    end
     # Plot out the installation predicted by the economically rational model
     if (length(model_descriptions) > 0)
         for i in 1:length(model_descriptions)
@@ -132,7 +146,7 @@ function plot_base_GD_vs_economically_rational(consumption_and_installation, tar
     title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_name))
 end
   
-function plot_single_tariff_category_per_company_with_model_prediction(company_data, tariff_category, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing)
+function plot_single_tariff_category_per_company_with_model_prediction(company_data, tariff_category, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing, linreg=false)
     company_data_split_by_tariff_category = Array{DataFrame}(undef,3)
 
     # Loop through all tariffs that we care about
@@ -149,7 +163,7 @@ function plot_single_tariff_category_per_company_with_model_prediction(company_d
     category_index = findfirst(t -> t == tariff_category, tariff_categories)
     
     plot_base_GD_vs_economically_rational(create_consumption_and_installation_arrays(
-                company_data_split_by_tariff_category[category_index]), tariff_categories[category_index], company_name, consumption, model_predictions; model_descriptions=model_descriptions, x_max=x_max, y_max=y_max)
+                company_data_split_by_tariff_category[category_index]), tariff_categories[category_index], company_name, consumption, model_predictions; model_descriptions=model_descriptions, x_max=x_max, y_max=y_max, linreg=linreg)
 end
 
 function plot_all_tariffs_per_company(company_data, company_name)
