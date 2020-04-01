@@ -1,3 +1,5 @@
+# The various columns in the Base_GD file, with rough English translations
+
 # Year  Month  Energy generated?  Energy Desposited?  Withdrawn energy?     Amount of energy used     Company   Tariff number   
 # A       B          C                     D               E                         F                 G               H               
 # ANNO, MES,  ENERGIA_GENERADA,  ENERGIA_DEPOSITADA, ENERGIA_RETIRADA  IMPORTE_POR_ENERGIA_RETIRADA,  EMPRESA, CODIGO_TARIFA,
@@ -9,8 +11,6 @@
 using DataFrames
 using PyPlot
 using GLM
-
-tariff_categories = ["Residential", "Commercial Industrial", "Medium Voltage"]
 
 # Tariff types:
 # 1: Residential
@@ -39,6 +39,9 @@ tariff_to_name = Dict([
         (12, "Media tensi—n a")
         ])
 
+tariff_categories = ["Residential", "Commercial Industrial", "Medium Voltage"]
+
+# Map from individual tariffs to the tariff category they're within
 tariff_category_mappings = Dict([
         (1, tariff_categories[1]),
         (4, tariff_categories[2]),
@@ -48,6 +51,7 @@ tariff_category_mappings = Dict([
         (12, tariff_categories[3])
         ])
 
+# Obtain the PV output timeseries to use for all installation and modeling calculations
 if !@isdefined pv_output
     if @isdefined(cnfl)
         pv_output = monte_carlo_solar_output(cnfl=cnfl)
@@ -56,13 +60,12 @@ if !@isdefined pv_output
     end
 end
 
-# Since the installed PV Systems are very unlikely to be fully efficient, we will add a loss factor
+# Since the installed PV Systems are very unlikely to be fully efficient, we will add a loss factor of 30%
 adjusted_pv_output = pv_output * 0.7
 
+# Obtain total PV system output for each month, since utility bill data is monthly
 output_by_month = Array{Float64}(undef,12)
-# First entry for looping purposes only
-days_per_month = [0,31,28,31,30,31,30,31,31,30,31,30,31]
-
+days_per_month = [0,31,28,31,30,31,30,31,31,30,31,30,31] # First entry for looping purposes only
 for i=1:12
     output_by_month[i] = sum(adjusted_pv_output[sum(days_per_month[1:i])*24+1:sum(days_per_month[1:i+1])*24])
 end     
@@ -106,13 +109,15 @@ function plot_consumption_and_installation(consumption_and_installation, tariff_
     return the_plot
 end
 
+# Function plotting the estimated “true” data versus the “economically rational” model
 function plot_base_GD_vs_economically_rational(consumption_and_installation, tariff_name, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing, linreg=false)
+    # Plot out the actual PV system sizes that people have based on their energy bills
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    # Plot out the actual PV system sizes that people have based on their energy bills
     ax1.scatter(consumption_and_installation[1], consumption_and_installation[2], marker=".", c = "#ffdf22", label = string("Actual PV System Installation for ", tariff_name, " Consumer"))
+    
+    # If desired, plot a linear regression of that data
     if (linreg)
-#         print(typeof(consumption_and_installation))
         cons_and_install = DataFrame()
         cons_and_install[:CONS] = consumption_and_installation[1]
         cons_and_install[:INSTALL] = consumption_and_installation[2]
@@ -122,6 +127,7 @@ function plot_base_GD_vs_economically_rational(consumption_and_installation, tar
         y_vals = data_m * x_vals .+ data_b
         ax1.plot(x_vals, y_vals, "--", c="k", label = string("Least-squares regression for actual consumer installation"))
     end
+    
     # Plot out the installation predicted by the economically rational model
     if (length(model_descriptions) > 0)
         for i in 1:length(model_descriptions)
@@ -146,6 +152,7 @@ function plot_base_GD_vs_economically_rational(consumption_and_installation, tar
     title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_name))
 end
   
+# Function plotting all tariffs of a single tariff category, with a model prediction
 function plot_single_tariff_category_per_company_with_model_prediction(company_data, tariff_category, company_name, consumption, model_predictions; model_descriptions=[], x_max=nothing, y_max=nothing, linreg=false)
     company_data_split_by_tariff_category = Array{DataFrame}(undef,3)
 
@@ -166,6 +173,7 @@ function plot_single_tariff_category_per_company_with_model_prediction(company_d
                 company_data_split_by_tariff_category[category_index]), tariff_categories[category_index], company_name, consumption, model_predictions; model_descriptions=model_descriptions, x_max=x_max, y_max=y_max, linreg=linreg)
 end
 
+# Function plotting each tariff of a single category individually
 function plot_all_tariffs_per_company(company_data, company_name)
     company_data_split_by_tariff_category = Array{DataFrame}(undef,3)
 
@@ -187,6 +195,7 @@ function plot_all_tariffs_per_company(company_data, company_name)
     end
 end
 
+# Function plotting a full tariff category with two regressions, divided at a pivot point
 function plot_tariff_category_with_two_regressions(company_data, tariff_category, company_name, consumption, model_predictions, inflection_point=1500)
     
     fig = plt.figure()
@@ -258,6 +267,7 @@ function plot_tariff_category_with_two_regressions(company_data, tariff_category
 #     colors = ["g", "c", "m", "y", "k"]
 end
 
+# Function plotting a full tariff category with multiple regressions
 function plot_tariff_category_with_many_regressions(company_data, tariff_category, company_name, consumption, model_predictions, inflection_points=[])
     colors = ["g", "c", "m", "y", "k"]
     
@@ -332,11 +342,9 @@ function plot_tariff_category_with_many_regressions(company_data, tariff_categor
         title(string("PV System Capacity for ", company_name, " Consumer with Tariff ", tariff_category))
         legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.);
     end
-    
-    
-    
 end
 
+# Function to plot with a separate linear regression for each tariff within a tariff category.
 function plot_with_subtariff_wise_regression(company_data, tariff_category, company_name, consumption, model_predictions)
     colors = ["g", "c", "m", "y", "k"]
     # Loop through all tariffs that we care about
@@ -379,6 +387,7 @@ function plot_with_subtariff_wise_regression(company_data, tariff_category, comp
         y_vals = data_m * x_vals .+ data_b
         new_axis.plot(x_vals, y_vals, "--", c=color, label = string("Least-squares regression for actual installation of subtariff ", tariff_num, " consumers"))
         
+        # Also includes standard error (standard deviation) bars on the line of best fit through the data
         stderr_b, stderr_m = stderror(linear_model)
         y_vals_2 = ((data_m + stderr_m) * x_vals .+ (data_b + stderr_b))
         new_axis.plot(x_vals, y_vals_2, "--", c="gray", label = string("Error on Least-squares regression"))
@@ -393,8 +402,7 @@ function plot_with_subtariff_wise_regression(company_data, tariff_category, comp
     
 end
 
-##################################
-
+# Function to plot a whole tariff category, each tariff being a different color
 function plot_segmented_tariff_category_with_regression(company_data, tariff_category, company_name, consumption, model_predictions, regression_limit=0, individual_regressions=false)
     colors = ["g", "c", "m", "y", "k"]
     
@@ -483,6 +491,7 @@ function plot_segmented_tariff_category_with_regression(company_data, tariff_cat
     xlabel("Consumer Monthly Energy use [kWh]")
     grid("on");
     
+    # Optionally include per-tariff regressions
     if individual_regressions == true
         num_figures = length(individual_consumption_and_installations)
         fig = plt.figure(figsize=(num_figures, 5*num_figures))
