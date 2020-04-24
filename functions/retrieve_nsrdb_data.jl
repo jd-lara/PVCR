@@ -197,17 +197,14 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
                                             end
                                         else
                                             # ICE
-                                            num_features = AG.nfeature(ice_gis)
-                                            for i in 1:(num_features)
-                                                ArchGDAL.getfeature(ice_gis, i - 1) do feature
-                                                    geom = AG.getgeomfield(feature, 0)
-                                                    source = AG.getspatialref(geom)
-                                                    AG.createcoordtrans(source, target) do transform
-                                                        AG.transform!(geom, transform)
-                                                        if AG.contains(geom, ag_coords)
-                                                            can_add = true
-                                                            println(string(string(possible_coords[1]),", ", string(possible_coords[2]), " is within an ICE area"))
-                                                        end
+                                            ArchGDAL.getfeature(ice_gis, 4) do feature
+                                                geom = AG.getgeomfield(feature, 0)
+                                                source = AG.getspatialref(geom)
+                                                AG.createcoordtrans(source, target) do transform
+                                                    AG.transform!(geom, transform)
+                                                    if AG.contains(geom, ag_coords)
+                                                        can_add = true
+                                                        println(string(string(possible_coords[1]),", ", string(possible_coords[2]), " is within the ICE area"))
                                                     end
                                                 end
                                             end
