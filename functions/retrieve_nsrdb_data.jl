@@ -8,7 +8,7 @@ using Dates
 using DataFrames
 
 const ICE_SAMPLE_NUM = 100
-const CNFL_SAMPLE_NUM = 36
+const CNFL_SAMPLE_NUM = 100
 
 # Getting filenames for files where we may have locally saved datasets of one solar year's worth of PV system generation data
 function get_mc_data_filename(num_samples, cnfl)
@@ -62,7 +62,7 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
     end
     
     # Loads GIS files for population density (to weight the location sampling), the CNFL area (for CNFL vs ICE split), the protected area (to exclude), the overall map of Costa Rica (to make sure that generated points are within the nation's borders)
-    pop_density_filename = "data/gpw-v4-population-density-rev11_2020_2pt5_min_tif/gpw_v4_population_density_rev11_2020_2pt5_min.tif"
+    pop_density_filename = "data/gpw-v4-population-density-rev11_2020_30_sec_tif/gpw_v4_population_density_rev11_2020_30_sec.tif"
     cnfl_gis_filename = "data/area_CNFL"
     area_protegidas_gis_filename = "data/Areaprotegidas"
     cr_map_filename = "data/CRI_adm/CRI_adm0.shp"
@@ -137,19 +137,25 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
                             weights = FrequencyWeights(population_density)
 
                             # For ICE or non-CNFL, run a weighted sampling, to obtain the coordinates to sample NSRDB from
+
                             # For CNFL, the coverage area is too small for this, so we just iterate through and choose spots
                             cnfl_ind = 1
+
                             # Obtain sample PV output for each location
                             while length(coords) < num_samples
-                                if (isassigned(cnfl, 1) && cnfl[1])
-                                    if cnfl_ind > length(indices)
-                                        break
-                                    end
-                                    possible_sample = indices[cnfl_ind]
-                                    cnfl_ind = cnfl_ind + 1
-                                else
-                                    possible_sample = sample(indices, weights)
-                                end
+
+                                possible_sample = sample(indices, weights)
+                                
+#                                 if (isassigned(cnfl, 1) && cnfl[1])
+#                                     if cnfl_ind > length(indices)
+#                                         break
+#                                     end
+#                                     possible_sample = indices[cnfl_ind]
+#                                     cnfl_ind = cnfl_ind + 1
+#                                 else
+#                                     possible_sample = sample(indices, weights)
+#                                 end
+
                                 possible_coords = box_to_coords(possible_sample)
 
                                 # Determine whether these coordinates have been already added, or are part of excluded parts of CR
