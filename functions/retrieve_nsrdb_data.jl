@@ -62,7 +62,7 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
     end
     
     # Loads GIS files for population density (to weight the location sampling), the CNFL area (for CNFL vs ICE split), the protected area (to exclude), the overall map of Costa Rica (to make sure that generated points are within the nation's borders)
-    pop_density_filename = "data/gpw-v4-population-density-rev11_2020_30_sec_tif/gpw_v4_population_density_rev11_2020_30_sec.tif"
+    pop_density_filename = "data/distritos/distritos2008crtm05.shp"
     cnfl_gis_filename = "data/area_CNFL"
     area_protegidas_gis_filename = "data/Areaprotegidas"
     cr_map_filename = "data/CRI_adm/CRI_adm0.shp"
@@ -76,7 +76,7 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
         AG.read(cnfl_gis_filename) do cnfl_gis_dataset
             cnfl_gis = AG.getlayer(cnfl_gis_dataset, 0)
             
-            # Get data corresponding to the location of CNFL-serviced districts, for later location sampling
+            # Get data corresponding to the map of ICE service territory, for later location sampling
             AG.read(ice_gis_filename) do ice_gis_dataset
                 ice_gis = AG.getlayer(ice_gis_dataset, 0)
             
@@ -87,152 +87,100 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
                     # The above 2 GIS data files are in a format which does not line up with latitude and longitude.
                     # We will run a transform to project it into lat-long
                     AG.importPROJ4("proj +proj=longlat") do target
+                        
+                        # Get population density information
+                        # This can either be derived from cnfl_gis, or we need a nation-wide district file
+                        district_centroids = []
+                        district_populations = []
+                            
+                        if isassigned(cnfl, 1) && cnfl[1]
+                            num_features = AG.nfeature(cnfl_gis)
+                            for i in 1:(num_features)
+                                ArchGDAL.getfeature(cnfl_gis, i - 1) do feature
+                                    male_population = AG.asint(feature, AG.getfieldindex(feature, "POB_2000_M"))
+                                    female_population = AG.asint(feature, AG.getfieldindex(feature, "POB_2000_H"))
+                                    total_population = male_population + female_population
+                                    push!(district_populations, total_population)
 
-                        # Get data corresponding to population density per ~5km square of the Earth's surface
-                        AG.read(pop_density_filename) do pop_dataset
-                            pop_band = AG.getband(pop_dataset, 1)
-
-                            # Limit to a bounding box surrounding Costa Rica (excluding Cocos Island National Park)
-                            min_lat = 8.040682
-                            max_lat = 11.2195684
-                            min_lon = -85.956896
-                            max_lon = -82.5060208
-
-                            # Alternate bounding box for CNFL (significantly speeds up point selection)
-                            if (isassigned(cnfl, 1) && cnfl[1])
-                                min_lat = 9.839327
-                                max_lat = 10.160209
-                                min_lon = -84.325326
-                                max_lon = -83.621292
+                                    geom = AG.getgeomfield(feature, 0)
+                                    source = AG.getspatialref(geom)
+                                    AG.createcoordtrans(source, target) do transform
+                                        AG.transform!(geom, transform)
+                                        centroid = AG.centroid(geom)
+                                        push!(district_centroids, centroid)
+                                    end
+                                end
                             end
+                        else
+                            AG.read(pop_density_filename) do districts_gis_dataset
+                                districts_gis = AG.getlayer(districts_gis_dataset, 0)
+                                println(districts_gis)
+                                num_features = AG.nfeature(districts_gis)
+                                for i in 1:(num_features)
+                                    ArchGDAL.getfeature(districts_gis, i - 1) do feature
+                                        male_population = AG.asint(feature, AG.getfieldindex(feature, "POB_2000_M"))
+                                        female_population = AG.asint(feature, AG.getfieldindex(feature, "POB_2000_H"))
+                                        total_population = male_population + female_population
+                                        push!(district_populations, total_population)
 
-                            # Convert bounding box lat,lon into indices with which to query the population density layer
-                            pop_band_width = AG.width(pop_band)
-                            pop_band_height = AG.height(pop_band)
-                            max_lat_ind = ceil((90 - min_lat) * pop_band_height / 180)
-                            min_lat_ind = min(ceil((90 - max_lat) * pop_band_height / 180), max_lat_ind - 1)
-                            min_lon_ind = ceil((min_lon + 180) * pop_band_width / 360)
-                            max_lon_ind = max(ceil((max_lon + 180) * pop_band_width / 360), min_lon_ind + 1)
-                            rows = UnitRange{Int}(min_lat_ind, max_lat_ind)
-                            cols = UnitRange{Int}(min_lon_ind, max_lon_ind)
-                            bounding_box_contents = AG.read(pop_band, rows, cols)
-                            bounding_box_contents = [i > 0 ? i : 0 for i in bounding_box_contents] # Have to clean up negative values
-
-                            # For converting indices back to lat/long coordinates
-                            box_height, box_width = size(bounding_box_contents)
-                            function box_to_coords(index)
-                                x = div(index, box_width)
-                                y = index % box_width
-                                lat = min_lat + (max_lat - min_lat)/box_height*x
-                                lon = min_lon + (max_lon - min_lon)/box_width*y
-                                return (lat,lon)
+                                        geom = AG.getgeomfield(feature, 0)
+                                        source = AG.getspatialref(geom)
+                                        AG.createcoordtrans(source, target) do transform
+                                            AG.transform!(geom, transform)
+                                            centroid = AG.centroid(geom)
+                                            push!(district_centroids, centroid)
+                                        end
+                                    end
+                                end
                             end
+                        end
 
-                            # Convert indices into a set of values for an Empirical CDF
-                            indices = collect(Iterators.flatten(1:length(bounding_box_contents)))
+                        # Convert population density into a set of weights for an Empirical CDF
+                        weights = FrequencyWeights(collect(Iterators.flatten(district_populations)))
 
-                            # Convert population density into a set of weights for an Empirical CDF
-                            population_density = collect(Iterators.flatten(bounding_box_contents))
-                            population_density /= sum(population_density)
-                            weights = FrequencyWeights(population_density)
+                        # Run a weighted sampling to obtain the coordinates to sample NSRDB from
 
-                            # For ICE or non-CNFL, run a weighted sampling, to obtain the coordinates to sample NSRDB from
+                        # Obtain sample PV output for each location
+                        while length(coords) < num_samples
 
-                            # For CNFL, the coverage area is too small for this, so we just iterate through and choose spots
-                            cnfl_ind = 1
+                            possible_coords = sample(district_centroids, weights)
 
-                            # Obtain sample PV output for each location
-                            while length(coords) < num_samples
+                            # Determine whether these coordinates have been already added, or are part of excluded parts of CR
+                            if !in(possible_coords, coords)
+                                can_add = false
+                                ag_coords = possible_coords
 
-                                possible_sample = sample(indices, weights)
-                                
-#                                 if (isassigned(cnfl, 1) && cnfl[1])
-#                                     if cnfl_ind > length(indices)
-#                                         break
-#                                     end
-#                                     possible_sample = indices[cnfl_ind]
-#                                     cnfl_ind = cnfl_ind + 1
-#                                 else
-#                                     possible_sample = sample(indices, weights)
-#                                 end
-
-                                possible_coords = box_to_coords(possible_sample)
-
-                                # Determine whether these coordinates have been already added, or are part of excluded parts of CR
-                                if !in(possible_coords, coords)
-                                    can_add = false
-                                    ag_coords = AG.createpoint(possible_coords[2],possible_coords[1])
-
-                                    # Is this point even on land, or is it over the ocean?
-                                    AG.read(cr_map_filename) do cr_map_dataset
-                                        cr_map_gis = AG.getlayer(cr_map_dataset, 0)
-                                        num_features = AG.nfeature(cr_map_gis)
-                                        for i in 1:(num_features)
-                                            ArchGDAL.getfeature(cr_map_gis, i - 1) do feature
-                                                geom = AG.getgeomfield(feature, 0)
-                                                if AG.contains(geom, ag_coords)
-                                                    can_add = true
-                                                end
-                                            end
-                                        end
-                                    end
-
-                                    if !can_add
-                                        continue
-                                    end
-
-                                    # Add a conditional check for whether the location is within CNFL or ICE service area
-                                    # Only do this when [cnfl] is defined: otherwise, assume we want national data
-                                    if isassigned(cnfl, 1)
-                                        can_add = false
-                                        if cnfl[1]
-                                            # CNFL
-                                            num_features = AG.nfeature(cnfl_gis)
-                                            for i in 1:(num_features)
-                                                ArchGDAL.getfeature(cnfl_gis, i - 1) do feature
-                                                    geom = AG.getgeomfield(feature, 0)
-                                                    source = AG.getspatialref(geom)
-                                                    AG.createcoordtrans(source, target) do transform
-                                                        AG.transform!(geom, transform)
-                                                        if AG.contains(geom, ag_coords)
-                                                            can_add = true
-                                                            println(string(string(possible_coords[1]),", ", string(possible_coords[2]), " is within a CNFL area"))
-                                                        end
-                                                    end
-                                                end
-                                            end
-                                        else
-                                            # ICE
-                                            ArchGDAL.getfeature(ice_gis, 4) do feature
-                                                geom = AG.getgeomfield(feature, 0)
-                                                source = AG.getspatialref(geom)
-                                                AG.createcoordtrans(source, target) do transform
-                                                    AG.transform!(geom, transform)
-                                                    if AG.contains(geom, ag_coords)
-                                                        can_add = true
-                                                        println(string(string(possible_coords[1]),", ", string(possible_coords[2]), " is within the ICE area"))
-                                                    end
-                                                end
-                                            end
-                                        end
-                                        
-                                        if !can_add
-                                            continue
-                                        end
-                                    end
-
-                                    # Check that the generated point isn't in a nationally protected area/national forest
-                                    num_features = AG.nfeature(area_protegidas_gis)
+                                # Is this point even on land, or is it over the ocean?
+                                AG.read(cr_map_filename) do cr_map_dataset
+                                    cr_map_gis = AG.getlayer(cr_map_dataset, 0)
+                                    num_features = AG.nfeature(cr_map_gis)
                                     for i in 1:(num_features)
-                                        ArchGDAL.getfeature(area_protegidas_gis, i - 1) do feature
+                                        ArchGDAL.getfeature(cr_map_gis, i - 1) do feature
                                             geom = AG.getgeomfield(feature, 0)
-                                            source = AG.getspatialref(geom)
-                                            AG.createcoordtrans(source, target) do transform
-                                                AG.transform!(geom, transform)
-                                                if AG.contains(geom, ag_coords)
-                                                    println(string("but ", string(possible_coords[1]), ", ", string(possible_coords[2]), " is within a protected area so we can't use it"))
-                                                    can_add = false # Not using this point because it is in an uninhabited location
-                                                end
+                                            if AG.contains(geom, ag_coords)
+                                                can_add = true
+                                            end
+                                        end
+                                    end
+                                end
+
+                                if !can_add
+                                    continue
+                                end
+
+                                # Add a conditional check for whether the location is within CNFL or ICE service area
+                                # Only do this when [cnfl] is defined: otherwise, assume we want national data
+                                # If this is CNFL, we're using the CNFL districts so it's guaranteed to be correct
+                                if isassigned(cnfl, 1) && !cnfl[1]
+                                    can_add = false
+                                    ArchGDAL.getfeature(ice_gis, 4) do feature
+                                        geom = AG.getgeomfield(feature, 0)
+                                        source = AG.getspatialref(geom)
+                                        AG.createcoordtrans(source, target) do transform
+                                            AG.transform!(geom, transform)
+                                            if AG.contains(geom, ag_coords)
+                                                can_add = true
+                                                println(string(possible_coords, " is within the ICE area"))
                                             end
                                         end
                                     end
@@ -240,25 +188,45 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
                                     if !can_add
                                         continue
                                     end
+                                end
 
-                                    # Make the call out to NSRDB + SAM to obtain pv_output for that location
-                                    pv_output = -1
-                                    try
-                                        lat, lon = possible_coords
-                                        pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
-                                    catch e
-                                        println("but the NSRDB call failed, so we won't use it")
-                                        can_add = false # Not using this point because NSRDB doesn't like it
-                                    end
-
-                                    if can_add
-                                        push!(coords, possible_coords)
-                                        println(length(coords))
-                                        if length(pv_outputs_array) == 0
-                                            append!(pv_outputs_array, pv_output)
-                                        else
-                                            pv_outputs_array = hcat(pv_outputs_array, pv_output)
+                                # Check that the generated point isn't in a nationally protected area/national forest
+                                num_features = AG.nfeature(area_protegidas_gis)
+                                for i in 1:(num_features)
+                                    ArchGDAL.getfeature(area_protegidas_gis, i - 1) do feature
+                                        geom = AG.getgeomfield(feature, 0)
+                                        source = AG.getspatialref(geom)
+                                        AG.createcoordtrans(source, target) do transform
+                                            AG.transform!(geom, transform)
+                                            if AG.contains(geom, ag_coords)
+                                                println(string("but ", possible_coords, " is within a protected area so we can't use it"))
+                                                can_add = false # Not using this point because it is in an uninhabited location
+                                            end
                                         end
+                                    end
+                                end
+
+                                if !can_add
+                                    continue
+                                end
+
+                                # Make the call out to NSRDB + SAM to obtain pv_output for that location
+                                pv_output = -1
+                                try
+                                    lat, lon = AG.gety(possible_coords, 0), AG.getx(possible_coords, 0)
+                                    pv_output = convert(Array{Float64,1},get_nsrdb_sam_pv_output(lat=lat, lon=lon))
+                                catch e
+                                    println("but the NSRDB call failed, so we won't use it")
+                                    can_add = false # Not using this point because NSRDB doesn't like it
+                                end
+
+                                if can_add
+                                    push!(coords, possible_coords)
+                                    println(length(coords))
+                                    if length(pv_outputs_array) == 0
+                                        append!(pv_outputs_array, pv_output)
+                                    else
+                                        pv_outputs_array = hcat(pv_outputs_array, pv_output)
                                     end
                                 end
                             end
@@ -270,7 +238,7 @@ function monte_carlo_solar_output(num_samples, cnfl; use_cached=false)
     end
     
     # Return the outputs of SAM, along with a DataFrame of all of the coordinates for future reference
-    coords = convert(Array{Float64,2}, DataFrame(Latitude = [x[1] for x in coords], Longitude = [x[2] for x in coords]))
+    coords = convert(Array{Float64,2}, DataFrame(Latitude = [AG.gety(coord, 0) for coord in coords], Longitude = [AG.getx(coord, 0) for coord in coords]))
     return (pv_outputs_array, coords)
     
 end
