@@ -1,17 +1,19 @@
 # needed to import a local module for SAM simulation off personal machine (requires installation at that location)
 import site
 import pandas as pd
+import geopandas as gp
+import numpy as np
 import time
 # Use site.addsitedir() to set the path to the SAM SDK API. Set path to the python directory.
 site.addsitedir("/Applications/sam-sdk-2015-6-30-r3/languages/python/")
 
 from PySAM.PySSC import PySSC
 
+# The function which calls to NSRDB and uses the PySAM module
 def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=-6,elevation=746):
     # Get raw solar radiation data from NSRDB
+    # (has a sleep to resolve issues of timeouts/overlapping queries/hitting hourly limits)
     time.sleep(2)
-#     print("Making NSRDB request at: ")
-#     print(time.ctime())
     df = pd.read_csv(request_url, skiprows=2)
     
     # Resource inputs for SAM model:
@@ -59,7 +61,25 @@ def call_nsrdb_and_ssc(request_url,lat=9.817934,lon=-84.070552,timezone=-6,eleva
     # Set use of lifetime output to false
     ssc.data_set_number(dat, b'system_use_lifetime_output', 0)
     
+    # Execute the PvWattsV5 module with this data
     mod = ssc.module_create(b'pvwattsv5');
     ssc.module_exec(mod, dat)
+    
+    # Obtain and return the “Generation” column of the result
     df["Generation"] = ssc.data_get_array(dat, b'gen')
     return df;
+
+# A function to plot the coordinates corresponding to the PV outputs, upon a map of Costa Rica
+def plot_mc_coords(coords_filename, cnfl=False):
+    if cnfl:
+        fp = "data/area_CNFL"
+    else:
+        fp = "data/CRI_adm/CRI_adm0.shp"
+    data = gp.GeoDataFrame.from_file(fp)
+    data = data.to_crs({'proj' :'longlat'})
+    ax = data.plot()
+
+    coords = np.loadtxt(coords_filename)
+    coords_df = pd.DataFrame({'Latitude': [x[0] for x in coords], 'Longitude': [x[1] for x in coords]})
+    coords_gdf = gp.GeoDataFrame(coords_df, geometry=gp.points_from_xy(coords_df.Longitude, coords_df.Latitude))
+    coords_gdf.plot(ax=ax, color='red')
